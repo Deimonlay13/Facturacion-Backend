@@ -1,30 +1,20 @@
 package com.gdl.facturacion_backend.entity;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
 
-import jakarta.persistence.CascadeType;
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
-import jakarta.persistence.JoinColumn;
-import jakarta.persistence.ManyToOne;
-import jakarta.persistence.OneToMany;
+import com.gdl.facturacion_backend.enums.EstadoDocumentoSii;
+import com.gdl.facturacion_backend.enums.Moneda;
+
+import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
-
 @Entity
+@Table(name = "documentos_tributarios")
 @Getter
 @Setter
-public class DocumentoTributarioEntity {
-    @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
-
-    @ManyToOne
-    @JoinColumn(name = "id_empresa")
-    private EmpresaEntity empresa;
+public class DocumentoTributarioEntity extends BaseModelEntity {
 
     @ManyToOne
     @JoinColumn(name = "id_tipo")
@@ -58,25 +48,31 @@ public class DocumentoTributarioEntity {
     @Column(columnDefinition = "TEXT")
     private String observaciones;
 
-    private String moneda;
+    @Enumerated(EnumType.STRING)
+    private Moneda moneda;
 
     @Column(name = "tipo_cambio")
-    private Double tipoCambio;
+    private BigDecimal tipoCambio;
 
     @Column(name = "monto_neto")
-    private Double montoNeto;
+    private BigDecimal montoNeto;
 
     @Column(name = "monto_iva")
-    private Double montoIva;
+    private BigDecimal montoIva;
 
     @Column(name = "monto_total")
-    private Double montoTotal;
+    private BigDecimal montoTotal;
 
+    @Enumerated(EnumType.STRING)
     @Column(name = "estado_sii")
-    private String estadoSii;
+    private EstadoDocumentoSii estadoSii;
 
     @Column(name = "xml_firmado")
     private Boolean xmlFirmado;
+
+    @ManyToOne
+    @JoinColumn(name = "id_envio")
+    private EnvioSiiEntity envio;
 
     @OneToMany(mappedBy = "documento", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<DetalleDocumentoEntity> detalles;
@@ -84,6 +80,5 @@ public class DocumentoTributarioEntity {
     @OneToMany(mappedBy = "documento")
     private List<ReferenciaDocumentoEntity> referencias;
 }
-
 
 

@@ -1,16 +1,10 @@
 package com.gdl.facturacion_backend.entity;
 
-
 import java.time.LocalDateTime;
 
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
-import jakarta.persistence.JoinColumn;
-import jakarta.persistence.ManyToOne;
-import jakarta.persistence.Table;
+import com.gdl.facturacion_backend.enums.EstadoSii;
+
+import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -19,19 +13,17 @@ import lombok.Setter;
 @Table(name = "historial_estado_sii")
 @Getter
 @Setter
-public class HistorialEstadoSiiEntity {
-
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+public class HistorialEstadoSiiEntity extends BaseModelEntity {
 
     @ManyToOne
-    @JoinColumn(name = "id_documento")
+    @JoinColumn(name = "id_documento", nullable = false)
     private DocumentoTributarioEntity documento;
 
-    private String estado;
+    @Enumerated(EnumType.STRING)
+    private EstadoSii estado;
 
-    private LocalDateTime fecha;
+    @Column(name = "fecha_estado")
+    private LocalDateTime fechaEstado;
 
     @Column(columnDefinition = "TEXT")
     private String mensaje;

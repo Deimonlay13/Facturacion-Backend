@@ -1,29 +1,18 @@
 package com.gdl.facturacion_backend.entity;
 
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
-import jakarta.persistence.JoinColumn;
-import jakarta.persistence.ManyToOne;
-import jakarta.persistence.Table;
+import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
 
 @Entity
-@Table(name = "clientes")
+@Table(name = "clientes", indexes = {
+        @Index(name = "idx_cliente_empresa_rut", columnList = "id_empresa,rut")
+})
 @Getter
 @Setter
-public class ClienteEntity {
-    
-    @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+public class ClienteEntity extends BaseModelEntity {
 
-    @ManyToOne
-    @JoinColumn(name = "id_empresa")
-    private EmpresaEntity empresa;
-
+    @Column(nullable = false)
     private String rut;
 
     @Column(name = "razon_social")
@@ -37,7 +26,10 @@ public class ClienteEntity {
     private String ciudad;
     private String comuna;
     private String pais;
+
     private String telefono;
     private String email;
-    private Boolean activo;
+
+    @Column(nullable = false)
+    private Boolean activo = true;
 }

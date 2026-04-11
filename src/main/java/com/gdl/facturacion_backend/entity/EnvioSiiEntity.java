@@ -2,14 +2,9 @@ package com.gdl.facturacion_backend.entity;
 
 import java.time.LocalDateTime;
 
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
-import jakarta.persistence.JoinColumn;
-import jakarta.persistence.ManyToOne;
-import jakarta.persistence.Table;
+import com.gdl.facturacion_backend.enums.EstadoEnvioSii;
+
+import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -18,23 +13,16 @@ import lombok.Setter;
 @Table(name = "envio_sii")
 @Getter
 @Setter
-public class EnvioSiiEntity {
+public class EnvioSiiEntity extends BaseModelEntity {
 
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
-
-    @ManyToOne
-    @JoinColumn(name = "id_empresa")
-    private EmpresaEntity empresa;
-
-    @Column(name = "track_id")
+    @Column(name = "track_id", unique = true)
     private String trackId;
 
     @Column(name = "fecha_envio")
     private LocalDateTime fechaEnvio;
 
-    private String estado;
+    @Enumerated(EnumType.STRING)
+    private EstadoEnvioSii estado;
 
     @Column(columnDefinition = "TEXT")
     private String respuesta;

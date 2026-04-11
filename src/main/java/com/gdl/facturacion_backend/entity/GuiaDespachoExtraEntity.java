@@ -1,13 +1,8 @@
 package com.gdl.facturacion_backend.entity;
 
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
-import jakarta.persistence.JoinColumn;
-import jakarta.persistence.OneToOne;
-import jakarta.persistence.Table;
+import com.gdl.facturacion_backend.enums.TipoTraslado;
+
+import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -15,18 +10,15 @@ import lombok.Setter;
 @Table(name = "guia_despacho_extra")
 @Getter
 @Setter
-public class GuiaDespachoExtraEntity {
-
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+public class GuiaDespachoExtraEntity extends BaseModelEntity {
 
     @OneToOne
-    @JoinColumn(name = "id_documento")
+    @JoinColumn(name = "id_documento", nullable = false, unique = true)
     private DocumentoTributarioEntity documento;
 
+    @Enumerated(EnumType.STRING)
     @Column(name = "tipo_traslado")
-    private String tipoTraslado;
+    private TipoTraslado tipoTraslado;
 
     private String patente;
 
@@ -39,4 +31,3 @@ public class GuiaDespachoExtraEntity {
     @Column(name = "direccion_destino")
     private String direccionDestino;
 }
-

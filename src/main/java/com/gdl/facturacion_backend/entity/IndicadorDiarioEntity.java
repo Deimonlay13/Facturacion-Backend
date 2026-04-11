@@ -1,15 +1,11 @@
 package com.gdl.facturacion_backend.entity;
 
-
+import java.math.BigDecimal;
 import java.time.LocalDate;
 
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.Id;
-import jakarta.persistence.Table;
+import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
-
 
 @Entity
 @Table(name = "indicadores_diarios")
@@ -21,15 +17,15 @@ public class IndicadorDiarioEntity {
     private LocalDate fecha;
 
     @Column(name = "valor_dolar")
-    private Double valorDolar;
+    private BigDecimal valorDolar;
 
     @Column(name = "valor_uf")
-    private Double valorUf;
+    private BigDecimal valorUf;
 
     @Column(name = "valor_euro")
-    private Double valorEuro;
+    private BigDecimal valorEuro;
 
     @Column(name = "valor_utm")
-    private Double valorUtm;
+    private BigDecimal valorUtm;
 }
 
