@@ -1,11 +1,6 @@
 package com.gdl.facturacion_backend.entity;
 
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
-import jakarta.persistence.Table;
+import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -13,15 +8,11 @@ import lombok.Setter;
 @Table(name = "tipo_documento")
 @Getter
 @Setter
-public class TipoDocumentoEntity {
-    
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "id_tipo")
-    private Long idTipo;
+public class TipoDocumentoEntity extends BaseGlobalEntity {
 
-    @Column(name = "codigo_sii")
+    @Column(name = "codigo_sii", unique = true, nullable = false)
     private Integer codigoSii;
 
     private String descripcion;
+
 }
