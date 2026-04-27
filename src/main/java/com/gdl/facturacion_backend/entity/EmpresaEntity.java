@@ -1,11 +1,6 @@
 package com.gdl.facturacion_backend.entity;
 
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
-import jakarta.persistence.Table;
+import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -13,10 +8,7 @@ import lombok.Setter;
 @Table(name = "empresas")
 @Getter
 @Setter
-public class EmpresaEntity {
-    
-    @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+public class EmpresaEntity  extends BaseGlobalEntity {
 
     @Column(name = "rut_empresa", unique = true, nullable = false)
     private String rutEmpresa;
@@ -43,7 +35,8 @@ public class EmpresaEntity {
     @Column(name = "email_contabilidad")
     private String emailContabilidad;
 
-    private Boolean activo;
+    @Column(nullable = false)
+    private Boolean activo = true;
 
     @Column(name = "rut_representante")
     private String rutRepresentante;
@@ -53,5 +46,5 @@ public class EmpresaEntity {
 
     @Column(name = "telefono_representante")
     private String telefonoRepresentante;
-}
 
+}
