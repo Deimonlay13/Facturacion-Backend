@@ -24,13 +24,13 @@ public class JwtService {
     }
 
     // Ahora incluye empresaId como claim
-    public String generateToken(String username, Long empresaId) {
+    public String generateToken(String username, Long empresaId, String rol) {
         Date now = new Date();
         Date expiration = new Date(now.getTime() + expirationMs);
 
         return Jwts.builder()
                 .subject(username)
-                .claims(Map.of("empresaId", empresaId)) // ← claim extra
+                .claims(Map.of("empresaId", empresaId, "rol", rol))
                 .issuedAt(now)
                 .expiration(expiration)
                 .signWith(getSigningKey())
