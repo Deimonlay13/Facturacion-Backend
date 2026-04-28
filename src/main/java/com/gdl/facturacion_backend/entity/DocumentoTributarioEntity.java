@@ -4,6 +4,7 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
 
+import com.gdl.facturacion_backend.enums.EstadoDocumento;
 import com.gdl.facturacion_backend.enums.EstadoDocumentoSii;
 import com.gdl.facturacion_backend.enums.Moneda;
 
@@ -62,6 +63,10 @@ public class DocumentoTributarioEntity extends BaseModelEntity {
 
     @Column(name = "monto_total")
     private BigDecimal montoTotal;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "estado")
+    private EstadoDocumento estado;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "estado_sii")
