@@ -25,6 +25,7 @@ public class ClienteEntity extends BaseModelEntity {
     private String direccion;
     private String ciudad;
     private String comuna;
+    private String region;
     private String pais;
 
     private String telefono;
