@@ -1,5 +1,7 @@
 package com.gdl.facturacion_backend.service;
 
+import java.util.List;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -19,6 +21,33 @@ public class EmpresaService {
         });
 
         EmpresaEntity e = new EmpresaEntity();
+        cargarDatosEmpresa(e, request);
+
+        return repository.save(e);
+    }
+
+    public List<EmpresaEntity> findAll() {
+        return repository.findAll();
+    }
+
+    public EmpresaEntity findById(Long id) {
+        return repository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Empresa no existe"));
+    }
+
+    public EmpresaEntity update(Long id, EmpresaCreateRequest request) {
+        EmpresaEntity e = findById(id);
+        cargarDatosEmpresa(e, request);
+        return repository.save(e);
+    }
+
+    public EmpresaEntity cambiarEstado(Long id, Boolean activo) {
+        EmpresaEntity e = findById(id);
+        e.setActivo(activo);
+        return repository.save(e);
+    }
+
+    private void cargarDatosEmpresa(EmpresaEntity e, EmpresaCreateRequest request) {
         e.setRutEmpresa(request.getRutEmpresa());
         e.setRazonSocial(request.getRazonSocial());
         e.setNombreFantasia(request.getNombreFantasia());
@@ -34,12 +63,5 @@ public class EmpresaService {
         e.setRutRepresentante(request.getRutRepresentante());
         e.setNombreRepresentante(request.getNombreRepresentante());
         e.setTelefonoRepresentante(request.getTelefonoRepresentante());
-
-        return repository.save(e);
-    }
-
-    public EmpresaEntity findById(Long id) {
-        return repository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Empresa no existe"));
     }
 }
