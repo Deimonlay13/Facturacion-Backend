@@ -223,6 +223,108 @@
       ]
     },
     {
+      "name": "Empresas",
+      "item": [
+        {
+          "name": "Listar empresas",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('listar empresas 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/empresas"
+          }
+        },
+        {
+          "name": "Obtener empresa",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('obtener empresa 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/empresas/{{empresaId}}"
+          }
+        },
+        {
+          "name": "Editar empresa",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('editar empresa 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/empresas/{{empresaId}}",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"rutEmpresa\": \"{{empresaRut}}\",\n  \"razonSocial\": \"QA Empresa Editada {{runSuffix}}\",\n  \"nombreFantasia\": \"QA Editada\",\n  \"giro\": \"Software\",\n  \"direccion\": \"Av QA 456\",\n  \"ciudad\": \"Santiago\",\n  \"comuna\": \"Las Condes\",\n  \"pais\": \"Chile\",\n  \"telefono\": \"+56911111111\",\n  \"sitioWeb\": \"https://qa.local\",\n  \"emailPrincipal\": \"qa@example.com\",\n  \"emailContabilidad\": \"contabilidad@example.com\",\n  \"rutRepresentante\": \"11111111-1\",\n  \"nombreRepresentante\": \"Representante QA\",\n  \"telefonoRepresentante\": \"+56922222222\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Activar/Desactivar empresa",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('cambiar estado empresa 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "PATCH",
+            "header": [],
+            "url": "{{baseUrl}}/empresas/{{empresaId}}/estado?activo=false"
+          }
+        }
+      ]
+    },
+    {
       "name": "Auth",
       "item": [
         {

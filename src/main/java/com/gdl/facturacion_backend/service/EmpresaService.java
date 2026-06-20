@@ -7,7 +7,11 @@ import org.springframework.stereotype.Service;
 
 import com.gdl.facturacion_backend.dto.EmpresaCreateRequest;
 import com.gdl.facturacion_backend.entity.EmpresaEntity;
+import com.gdl.facturacion_backend.exception.RecursoNoEncontradoException;
+import com.gdl.facturacion_backend.exception.ReglaNegocioException;
+import com.gdl.facturacion_backend.exception.RutInvalidoException;
 import com.gdl.facturacion_backend.repository.EmpresaRepository;
+import com.gdl.facturacion_backend.util.RutUtils;
 
 @Service
 public class EmpresaService {
@@ -16,12 +20,15 @@ public class EmpresaService {
     private EmpresaRepository repository;
 
     public EmpresaEntity create(EmpresaCreateRequest request) {
-        repository.findByRutEmpresa(request.getRutEmpresa()).ifPresent(e -> {
-            throw new RuntimeException("Ya existe una empresa con ese RUT");
+        String rut = validarRut(request.getRutEmpresa());
+
+        repository.findByRutEmpresa(rut).ifPresent(e -> {
+            throw new ReglaNegocioException("Ya existe una empresa con el RUT: " + rut);
         });
 
         EmpresaEntity e = new EmpresaEntity();
-        cargarDatosEmpresa(e, request);
+        e.setActivo(true);
+        cargarDatosEmpresa(e, request, rut);
 
         return repository.save(e);
     }
@@ -32,12 +39,21 @@ public class EmpresaService {
 
     public EmpresaEntity findById(Long id) {
         return repository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Empresa no existe"));
+                .orElseThrow(() -> new RecursoNoEncontradoException("Empresa no encontrada con id: " + id));
     }
 
     public EmpresaEntity update(Long id, EmpresaCreateRequest request) {
         EmpresaEntity e = findById(id);
-        cargarDatosEmpresa(e, request);
+        String rut = validarRut(request.getRutEmpresa());
+
+        // Permitir el mismo RUT solo si pertenece a esta misma empresa
+        repository.findByRutEmpresa(rut)
+                .filter(otra -> !otra.getId().equals(id))
+                .ifPresent(otra -> {
+                    throw new ReglaNegocioException("Ya existe otra empresa con el RUT: " + rut);
+                });
+
+        cargarDatosEmpresa(e, request, rut);
         return repository.save(e);
     }
 
@@ -47,8 +63,16 @@ public class EmpresaService {
         return repository.save(e);
     }
 
-    private void cargarDatosEmpresa(EmpresaEntity e, EmpresaCreateRequest request) {
-        e.setRutEmpresa(request.getRutEmpresa());
+    private String validarRut(String rut) {
+        String limpio = rut != null ? RutUtils.clean(rut) : null;
+        if (!RutUtils.isValid(limpio)) {
+            throw new RutInvalidoException(rut);
+        }
+        return limpio;
+    }
+
+    private void cargarDatosEmpresa(EmpresaEntity e, EmpresaCreateRequest request, String rutLimpio) {
+        e.setRutEmpresa(rutLimpio);
         e.setRazonSocial(request.getRazonSocial());
         e.setNombreFantasia(request.getNombreFantasia());
         e.setGiro(request.getGiro());
