@@ -2,14 +2,17 @@ package com.gdl.facturacion_backend.service;
 
 import com.gdl.facturacion_backend.dto.documento.DetalleCreateRequest;
 import com.gdl.facturacion_backend.dto.documento.DocumentoCreateRequest;
+import com.gdl.facturacion_backend.dto.documento.DocumentoUpdateRequest;
 import com.gdl.facturacion_backend.dto.documento.GuiaDespachoRequest;
 import com.gdl.facturacion_backend.dto.documento.ReferenciaCreateRequest;
 import com.gdl.facturacion_backend.entity.*;
 import com.gdl.facturacion_backend.enums.EstadoDocumento;
 import com.gdl.facturacion_backend.enums.EstadoDocumentoSii;
+import com.gdl.facturacion_backend.enums.Moneda;
 import com.gdl.facturacion_backend.exception.RecursoNoEncontradoException;
 import com.gdl.facturacion_backend.exception.ReglaNegocioException;
 import com.gdl.facturacion_backend.repository.DocumentoTributarioRepository;
+import com.gdl.facturacion_backend.repository.EmpresaRepository;
 import com.gdl.facturacion_backend.repository.GuiaDespachoExtraRepository;
 import com.gdl.facturacion_backend.repository.ProductoRepository;
 import com.gdl.facturacion_backend.repository.ReferenciaDocumentoRepository;
@@ -20,6 +23,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
+import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -41,6 +45,7 @@ public class DocumentoTributarioService extends BaseTenantService<DocumentoTribu
     private final CalculoMontosService calculoMontosService;
     private final ReglaTributariaResolver reglaResolver;
     private final FolioService folioService;
+    private final EmpresaRepository empresaRepository;
 
     public DocumentoTributarioService(DocumentoTributarioRepository documentoRepository,
                                       TenantService tenantService,
@@ -51,7 +56,8 @@ public class DocumentoTributarioService extends BaseTenantService<DocumentoTribu
                                       GuiaDespachoExtraRepository guiaRepository,
                                       CalculoMontosService calculoMontosService,
                                       ReglaTributariaResolver reglaResolver,
-                                      FolioService folioService) {
+                                      FolioService folioService,
+                                      EmpresaRepository empresaRepository) {
         super(documentoRepository, tenantService);
         this.documentoRepository = documentoRepository;
         this.tipoDocumentoService = tipoDocumentoService;
@@ -62,6 +68,7 @@ public class DocumentoTributarioService extends BaseTenantService<DocumentoTribu
         this.calculoMontosService = calculoMontosService;
         this.reglaResolver = reglaResolver;
         this.folioService = folioService;
+        this.empresaRepository = empresaRepository;
     }
 
     /** Crea el documento base en estado BORRADOR. No asigna folio ni calcula montos. */
@@ -77,8 +84,35 @@ public class DocumentoTributarioService extends BaseTenantService<DocumentoTribu
         documento.setEstadoSii(EstadoDocumentoSii.PENDIENTE);
         documento.setXmlFirmado(false);
         documento.setFolio(null);
+        documento.setMoneda(Moneda.CLP);
+        documento.setTipoCambio(BigDecimal.ONE);
 
         return save(documento);
+    }
+
+    @Transactional
+    public DocumentoTributarioEntity actualizarBorrador(Long documentoId, DocumentoUpdateRequest request) {
+        DocumentoTributarioEntity documento = cargarEditable(documentoId);
+
+        if (request.getClienteId() != null) {
+            documento.setCliente(clienteService.obtenerPorId(request.getClienteId()));
+        }
+        if (request.getFechaVencimiento() != null) {
+            documento.setFechaVencimiento(request.getFechaVencimiento());
+        }
+        if (request.getObservaciones() != null) {
+            documento.setObservaciones(request.getObservaciones());
+        }
+        if (request.getMoneda() != null) {
+            documento.setMoneda(request.getMoneda());
+        }
+        if (request.getTipoCambio() != null) {
+            documento.setTipoCambio(request.getTipoCambio());
+        }
+
+        DocumentoTributarioEntity guardado = save(documento);
+        precargar(guardado);
+        return guardado;
     }
 
     public List<DocumentoTributarioEntity> consultar(Long clienteId, Integer codigoTipo,
@@ -208,6 +242,8 @@ public class DocumentoTributarioService extends BaseTenantService<DocumentoTribu
         ReglaTributaria regla = reglaResolver.resolver(documento.getTipoDocumento().getCodigoSii());
         regla.validarParaEmitir(documento);
         calculoMontosService.recalcular(documento);
+        copiarSnapshotCliente(documento);
+        copiarSnapshotEmpresa(documento);
 
         Integer folio = folioService.asignarSiguienteFolio(documento.getTipoDocumento().getCodigoSii());
         documento.setFolio(folio);
@@ -252,5 +288,36 @@ public class DocumentoTributarioService extends BaseTenantService<DocumentoTribu
         } catch (IllegalArgumentException e) {
             throw new ReglaNegocioException("Estado inválido: " + estado);
         }
+    }
+
+    private void copiarSnapshotCliente(DocumentoTributarioEntity documento) {
+        ClienteEntity cliente = documento.getCliente();
+        documento.setRut(cliente.getRut());
+        documento.setRazonSocial(cliente.getRazonSocial());
+        documento.setGiro(cliente.getGiro());
+        documento.setDireccion(cliente.getDireccion());
+        documento.setCiudad(cliente.getCiudad());
+        documento.setComuna(cliente.getComuna());
+        documento.setPais(cliente.getPais());
+        documento.setCorreo(cliente.getEmail());
+    }
+
+    private void copiarSnapshotEmpresa(DocumentoTributarioEntity documento) {
+        EmpresaEntity empresa = empresaRepository.findById(getEmpresaId())
+                .orElseThrow(() -> new RecursoNoEncontradoException("Empresa no encontrada"));
+
+        documento.setRutEmisor(empresa.getRutEmpresa());
+        documento.setRazonSocialEmisor(empresa.getRazonSocial());
+        documento.setNombreFantasiaEmisor(empresa.getNombreFantasia());
+        documento.setGiroEmisor(empresa.getGiro());
+        documento.setDireccionEmisor(empresa.getDireccion());
+        documento.setCiudadEmisor(empresa.getCiudad());
+        documento.setComunaEmisor(empresa.getComuna());
+        documento.setPaisEmisor(empresa.getPais());
+        documento.setTelefonoEmisor(empresa.getTelefono());
+        documento.setEmailPrincipalEmisor(empresa.getEmailPrincipal());
+        documento.setEmailContabilidadEmisor(empresa.getEmailContabilidad());
+        documento.setRutRepresentanteEmisor(empresa.getRutRepresentante());
+        documento.setNombreRepresentanteEmisor(empresa.getNombreRepresentante());
     }
 }

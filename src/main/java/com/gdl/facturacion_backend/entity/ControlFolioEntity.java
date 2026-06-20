@@ -4,6 +4,8 @@ import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
 
+import java.time.LocalDate;
+
 @Entity
 @Table(name = "control_folios")
 @Getter
@@ -14,15 +16,13 @@ public class ControlFolioEntity extends BaseModelEntity {
     @JoinColumn(name = "id_tipo")
     private TipoDocumentoEntity tipoDocumento;
 
-    @Column(name = "rango_desde")
-    private Integer rangoDesde;
-
-    @Column(name = "rango_hasta")
-    private Integer rangoHasta;
+    @ManyToOne
+    @JoinColumn(name = "id_caf_activo")
+    private CafEntity cafActivo;
 
     @Column(name = "ultimo_folio_utilizado")
     private Integer ultimoFolioUtilizado;
 
-    @Column(columnDefinition = "TEXT")
-    private String cafXml;
+    @Column(name = "ultima_fecha_emision")
+    private LocalDate ultimaFechaEmision;
 }
