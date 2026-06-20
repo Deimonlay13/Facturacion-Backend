@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Facturacion DTE - API</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swagger-ui-dist@5/swagger-ui.css">
+  <link rel="icon" href="data:,">
+  <style>
+    /* ---- Tema oscuro para Swagger UI ---- */
+    :root { --d-bg:#0f161e; --d-panel:#18222e; --d-panel2:#1c2733; --d-border:#26333f; --d-text:#dfe7ef; --d-muted:#8499ab; }
+    body { margin:0; background:var(--d-bg); }
+    .swagger-ui, .swagger-ui .info .title, .swagger-ui .info li, .swagger-ui .info p, .swagger-ui .info table,
+    .swagger-ui label, .swagger-ui .tab li, .swagger-ui .opblock-tag,
+    .swagger-ui h1,.swagger-ui h2,.swagger-ui h3,.swagger-ui h4,.swagger-ui h5 { color:var(--d-text); }
+    .swagger-ui .info a, .swagger-ui a.nostyle { color:#7fb2d8; }
+    .swagger-ui .scheme-container { background:var(--d-panel); box-shadow:none; border-bottom:1px solid var(--d-border); }
+    .swagger-ui .opblock-tag { border-bottom-color:var(--d-border); }
+    .swagger-ui .opblock { background:var(--d-panel); border-color:var(--d-border); box-shadow:none; }
+    .swagger-ui .opblock .opblock-summary { border-color:var(--d-border); }
+    .swagger-ui .opblock .opblock-summary-path,
+    .swagger-ui .opblock .opblock-summary-path__deprecated,
+    .swagger-ui .opblock .opblock-summary-description { color:var(--d-text); }
+    .swagger-ui .opblock-description-wrapper p, .swagger-ui .opblock-title_normal,
+    .swagger-ui .opblock-external-docs-wrapper, .swagger-ui .responses-inner h4,
+    .swagger-ui .responses-inner h5, .swagger-ui .response-col_status,
+    .swagger-ui .parameter__name, .swagger-ui .parameter__type,
+    .swagger-ui .parameter__in, .swagger-ui table thead tr td, .swagger-ui table thead tr th { color:var(--d-text); }
+    .swagger-ui table thead tr td, .swagger-ui table thead tr th { border-color:var(--d-border); }
+    .swagger-ui .markdown p, .swagger-ui .markdown li, .swagger-ui .renderedMarkdown p { color:#cdd8e3; }
+    .swagger-ui section.models { background:var(--d-panel); border-color:var(--d-border); }
+    .swagger-ui section.models .model-container { background:var(--d-panel2); }
+    .swagger-ui .model, .swagger-ui .model-title { color:var(--d-text); }
+    .swagger-ui .model-box { background:var(--d-panel2); }
+    .swagger-ui input[type=text], .swagger-ui input[type=password], .swagger-ui input[type=email],
+    .swagger-ui textarea, .swagger-ui select {
+      background:#0e1620; color:var(--d-text); border:1px solid #2c3a4a; }
+    .swagger-ui .btn { color:var(--d-text); border-color:#3a83af; background:transparent; }
+    .swagger-ui .btn.authorize { color:#74cf7e; border-color:#74cf7e; }
+    .swagger-ui .btn.authorize svg { fill:#74cf7e; }
+    .swagger-ui .btn.execute { background:#2a6f97; color:#fff; border-color:#2a6f97; }
+    .swagger-ui .topbar { background:#131c25; }
+    .swagger-ui .dialog-ux .modal-ux { background:var(--d-panel); border-color:var(--d-border); }
+    .swagger-ui .dialog-ux .modal-ux-header h3, .swagger-ui .dialog-ux .modal-ux-content h4,
+    .swagger-ui .dialog-ux .modal-ux-content p { color:var(--d-text); }
+    .swagger-ui .highlight-code, .swagger-ui .microlight { background:#0b1118 !important; }
+    .swagger-ui .responses-inner, .swagger-ui .opblock-body pre.microlight { color:var(--d-text); }
+    .swagger-ui .tab li.active { color:var(--d-text); }
+    .swagger-ui svg:not(.authorize):not(.locked) { fill:#aab8c6; }
+  </style>
+</head>
+<body>
+  <div id="swagger-ui"></div>
+  <script src="https://cdn.jsdelivr.net/npm/swagger-ui-dist@5/swagger-ui-bundle.js" crossorigin></script>
+  <script>
+    window.onload = () => {
+      window.ui = SwaggerUIBundle({
+        url: "/v3/api-docs",
+        dom_id: "#swagger-ui",
+        presets: [SwaggerUIBundle.presets.apis],
+        layout: "BaseLayout",
+        deepLinking: false,
+        persistAuthorization: true
+      });
+    };
+  </script>
+</body>
+</html>

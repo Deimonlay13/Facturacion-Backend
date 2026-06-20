@@ -56,4 +56,15 @@ public class JwtService {
 
         return value != null ? Long.valueOf(value.toString()) : null;
     }
+
+    public String extractRol(String token) {
+        Object value = Jwts.parser()
+                .verifyWith(getSigningKey())
+                .build()
+                .parseSignedClaims(token)
+                .getPayload()
+                .get("rol");
+
+        return value != null ? value.toString() : null;
+    }
 }

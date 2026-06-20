@@ -10,6 +10,8 @@ import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
  * Parser del TXT de factura (pipe-delimitado). Cada línea empieza con '|' y su
@@ -47,9 +49,13 @@ public class TxtFacturaParser {
             }
             switch (marcador.replace("*", "").trim().toUpperCase()) {
                 case "CLIENTE" -> {
-                    codigoTipo = parseEntero(campo(t, 2), "tipo de documento (CLIENTE)");
+                    Integer tipoNumerico = parseEntero(campo(t, 2), "tipo de documento (CLIENTE)");
+                    String numeroDoc = campo(t, 3);
+                    // El número de tipo del archivo no es confiable (las notas vienen como 34).
+                    // Se determina por el prefijo del N° de documento; si no se reconoce, se usa el número.
+                    codigoTipo = tipoDesdeNumeroDoc(numeroDoc, tipoNumerico);
                     cliente = new FacturaTxt.Cliente(
-                            campo(t, 3),  // código
+                            numeroDoc,    // código / N° de documento
                             campo(t, 5),  // razón social
                             campo(t, 6),  // dirección
                             campo(t, 7),  // país
@@ -90,6 +96,23 @@ public class TxtFacturaParser {
 
         return new FacturaTxt(codigoTipo, cliente, fechaEmision, fechaVencimiento,
                 condicionPago, tipoCambio, moneda, observacion, operacion, vendedor, detalles);
+    }
+
+    /**
+     * Determina el tipo de DTE por el prefijo del N° de documento (más confiable que el
+     * número de tipo del archivo, que llega como 34 incluso en notas de crédito):
+     * FA → 33 (factura afecta), FE → 34 (factura exenta), NC → 61 (nota de crédito),
+     * ND → 56 (nota de débito). Si no se reconoce el prefijo, se usa el número del archivo.
+     */
+    private Integer tipoDesdeNumeroDoc(String numeroDoc, Integer tipoArchivo) {
+        if (numeroDoc != null) {
+            String p = numeroDoc.trim().toUpperCase();
+            if (p.startsWith("FA")) return 33;
+            if (p.startsWith("FE")) return 34;
+            if (p.startsWith("NC")) return 61;
+            if (p.startsWith("ND")) return 56;
+        }
+        return tipoArchivo;
     }
 
     private String campo(String[] tokens, int idx) {
@@ -145,12 +168,22 @@ public class TxtFacturaParser {
         return sb.toString().replaceAll("\\s+", " ").trim();
     }
 
+    private static final Pattern MONEDA = Pattern.compile("\\b(USD|EUR|UF|CLP)\\b");
+
+    /**
+     * La moneda no viene en un campo propio: se detecta del código de moneda que las
+     * líneas de detalle traen junto al monto (ej. "...USD:8615.2"). Si ninguna línea
+     * declara moneda, se asume CLP (documento nacional afecto).
+     */
     private String detectarMoneda(List<FacturaTxt.Detalle> detalles) {
         for (FacturaTxt.Detalle d : detalles) {
-            String desc = d.descripcion() == null ? "" : d.descripcion().toUpperCase();
-            if (desc.contains("USD")) return "USD";
-            if (desc.contains("EUR")) return "EUR";
-            if (desc.contains("UF")) return "UF";
+            if (d.descripcion() == null) {
+                continue;
+            }
+            Matcher m = MONEDA.matcher(d.descripcion().toUpperCase());
+            if (m.find()) {
+                return m.group(1);
+            }
         }
         return "CLP";
     }
