@@ -52,27 +52,94 @@
     }
   ],
   "variable": [
-    { "key": "baseUrl", "value": "http://localhost:8080" },
-    { "key": "token", "value": "" },
-    { "key": "empresaId", "value": "" },
-    { "key": "clienteId", "value": "" },
-    { "key": "productoId", "value": "" },
-    { "key": "documentoId", "value": "" },
-    { "key": "detalleId", "value": "" },
-    { "key": "guiaId", "value": "" },
-    { "key": "notaCreditoId", "value": "" },
-    { "key": "runSuffix", "value": "" },
-    { "key": "empresaRut", "value": "" },
-    { "key": "clienteRut", "value": "" },
-    { "key": "username", "value": "" },
-    { "key": "password", "value": "" },
-    { "key": "productoCodigo", "value": "" },
-    { "key": "caf33Desde", "value": "" },
-    { "key": "caf33Hasta", "value": "" },
-    { "key": "caf52Desde", "value": "" },
-    { "key": "caf52Hasta", "value": "" },
-    { "key": "caf61Desde", "value": "" },
-    { "key": "caf61Hasta", "value": "" }
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8080"
+    },
+    {
+      "key": "token",
+      "value": ""
+    },
+    {
+      "key": "empresaId",
+      "value": ""
+    },
+    {
+      "key": "clienteId",
+      "value": ""
+    },
+    {
+      "key": "productoId",
+      "value": ""
+    },
+    {
+      "key": "documentoId",
+      "value": ""
+    },
+    {
+      "key": "detalleId",
+      "value": ""
+    },
+    {
+      "key": "guiaId",
+      "value": ""
+    },
+    {
+      "key": "notaCreditoId",
+      "value": ""
+    },
+    {
+      "key": "runSuffix",
+      "value": ""
+    },
+    {
+      "key": "empresaRut",
+      "value": ""
+    },
+    {
+      "key": "clienteRut",
+      "value": ""
+    },
+    {
+      "key": "username",
+      "value": ""
+    },
+    {
+      "key": "password",
+      "value": ""
+    },
+    {
+      "key": "productoCodigo",
+      "value": ""
+    },
+    {
+      "key": "caf33Desde",
+      "value": ""
+    },
+    {
+      "key": "caf33Hasta",
+      "value": ""
+    },
+    {
+      "key": "caf52Desde",
+      "value": ""
+    },
+    {
+      "key": "caf52Hasta",
+      "value": ""
+    },
+    {
+      "key": "caf61Desde",
+      "value": ""
+    },
+    {
+      "key": "caf61Hasta",
+      "value": ""
+    },
+    {
+      "key": "usuarioId",
+      "value": ""
+    }
   ],
   "item": [
     {
@@ -81,7 +148,9 @@
         {
           "name": "Tipos documento",
           "request": {
-            "auth": { "type": "noauth" },
+            "auth": {
+              "type": "noauth"
+            },
             "method": "GET",
             "header": [],
             "url": "{{baseUrl}}/api/tipos-documento"
@@ -90,7 +159,9 @@
         {
           "name": "Listar roles",
           "request": {
-            "auth": { "type": "noauth" },
+            "auth": {
+              "type": "noauth"
+            },
             "method": "GET",
             "header": [],
             "url": "{{baseUrl}}/roles"
@@ -99,9 +170,16 @@
         {
           "name": "Crear rol QA",
           "request": {
-            "auth": { "type": "noauth" },
+            "auth": {
+              "type": "noauth"
+            },
             "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
             "url": "{{baseUrl}}/roles",
             "body": {
               "mode": "raw",
@@ -125,9 +203,16 @@
             }
           ],
           "request": {
-            "auth": { "type": "noauth" },
+            "auth": {
+              "type": "noauth"
+            },
             "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
             "url": "{{baseUrl}}/empresas",
             "body": {
               "mode": "raw",
@@ -156,11 +241,19 @@
             }
           ],
           "request": {
-            "auth": { "type": "noauth" },
+            "auth": {
+              "type": "noauth"
+            },
             "method": "POST",
             "header": [
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "X-Tenant-ID", "value": "{{empresaId}}" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Tenant-ID",
+                "value": "{{empresaId}}"
+              }
             ],
             "url": "{{baseUrl}}/auth/signup",
             "body": {
@@ -185,13 +278,177 @@
             }
           ],
           "request": {
-            "auth": { "type": "noauth" },
+            "auth": {
+              "type": "noauth"
+            },
             "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
             "url": "{{baseUrl}}/auth/login",
             "body": {
               "mode": "raw",
               "raw": "{\n  \"username\": \"{{username}}\",\n  \"password\": \"{{password}}\"\n}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Usuarios",
+      "item": [
+        {
+          "name": "Crear usuario",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const json = pm.response.json();",
+                  "if (json.id) pm.collectionVariables.set('usuarioId', json.id);",
+                  "pm.test('crear usuario 201', () => pm.response.to.have.status(201));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/usuarios",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"operador_{{$timestamp}}\",\n  \"password\": \"Secret123\",\n  \"rol\": \"ROLE_USER\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Listar usuarios",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('listar usuarios 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/usuarios"
+          }
+        },
+        {
+          "name": "Obtener usuario",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('obtener usuario 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/usuarios/{{usuarioId}}"
+          }
+        },
+        {
+          "name": "Editar usuario",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('editar usuario 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/usuarios/{{usuarioId}}",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"password\": \"NuevaClave123\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Cambiar rol",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('cambiar rol 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/usuarios/{{usuarioId}}/rol",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"rol\": \"ROLE_ADMIN\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Activar/Desactivar usuario",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('cambiar estado 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/usuarios/{{usuarioId}}/estado",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"activo\": false\n}"
             }
           }
         }
@@ -217,7 +474,12 @@
           ],
           "request": {
             "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
             "url": "{{baseUrl}}/clientes",
             "body": {
               "mode": "raw",
@@ -227,17 +489,30 @@
         },
         {
           "name": "Listar clientes",
-          "request": { "method": "GET", "header": [], "url": "{{baseUrl}}/clientes" }
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/clientes"
+          }
         },
         {
           "name": "Obtener cliente",
-          "request": { "method": "GET", "header": [], "url": "{{baseUrl}}/clientes/{{clienteId}}" }
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/clientes/{{clienteId}}"
+          }
         },
         {
           "name": "Actualizar cliente",
           "request": {
             "method": "PUT",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
             "url": "{{baseUrl}}/clientes/{{clienteId}}",
             "body": {
               "mode": "raw",
@@ -247,11 +522,19 @@
         },
         {
           "name": "Consultar SRE",
-          "request": { "method": "GET", "header": [], "url": "{{baseUrl}}/clientes/sre?rut=76883241-2" }
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/clientes/sre?rut=76883241-2"
+          }
         },
         {
           "name": "Descargar plantilla",
-          "request": { "method": "GET", "header": [], "url": "{{baseUrl}}/clientes/plantilla" }
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/clientes/plantilla"
+          }
         },
         {
           "name": "Cargar plantilla",
@@ -273,7 +556,11 @@
         },
         {
           "name": "Eliminar cliente",
-          "request": { "method": "DELETE", "header": [], "url": "{{baseUrl}}/clientes/{{clienteId}}" }
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": "{{baseUrl}}/clientes/{{clienteId}}"
+          }
         }
       ]
     },
@@ -297,7 +584,12 @@
           ],
           "request": {
             "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
             "url": "{{baseUrl}}/productos",
             "body": {
               "mode": "raw",
@@ -307,13 +599,22 @@
         },
         {
           "name": "Obtener producto",
-          "request": { "method": "GET", "header": [], "url": "{{baseUrl}}/productos/{{productoId}}" }
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/productos/{{productoId}}"
+          }
         },
         {
           "name": "Actualizar producto",
           "request": {
             "method": "PUT",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
             "url": "{{baseUrl}}/productos/{{productoId}}",
             "body": {
               "mode": "raw",
@@ -323,7 +624,11 @@
         },
         {
           "name": "Eliminar producto",
-          "request": { "method": "DELETE", "header": [], "url": "{{baseUrl}}/productos/{{productoId}}" }
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": "{{baseUrl}}/productos/{{productoId}}"
+          }
         }
       ]
     },
@@ -334,7 +639,12 @@
           "name": "Cargar CAF 33",
           "request": {
             "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
             "url": "{{baseUrl}}/api/folios/caf",
             "body": {
               "mode": "raw",
@@ -346,7 +656,12 @@
           "name": "Cargar CAF 52",
           "request": {
             "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
             "url": "{{baseUrl}}/api/folios/caf",
             "body": {
               "mode": "raw",
@@ -358,7 +673,12 @@
           "name": "Cargar CAF 61",
           "request": {
             "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
             "url": "{{baseUrl}}/api/folios/caf",
             "body": {
               "mode": "raw",
@@ -368,11 +688,19 @@
         },
         {
           "name": "Listar CAF",
-          "request": { "method": "GET", "header": [], "url": "{{baseUrl}}/api/folios/caf" }
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/folios/caf"
+          }
         },
         {
           "name": "Listar control folios",
-          "request": { "method": "GET", "header": [], "url": "{{baseUrl}}/api/folios/control" }
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/folios/control"
+          }
         }
       ]
     },
@@ -396,7 +724,12 @@
           ],
           "request": {
             "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
             "url": "{{baseUrl}}/api/documentos",
             "body": {
               "mode": "raw",
@@ -408,7 +741,12 @@
           "name": "Editar borrador",
           "request": {
             "method": "PUT",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
             "url": "{{baseUrl}}/api/documentos/{{documentoId}}",
             "body": {
               "mode": "raw",
@@ -432,7 +770,12 @@
           ],
           "request": {
             "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
             "url": "{{baseUrl}}/api/documentos/{{documentoId}}/detalles",
             "body": {
               "mode": "raw",
@@ -442,23 +785,43 @@
         },
         {
           "name": "Obtener documento",
-          "request": { "method": "GET", "header": [], "url": "{{baseUrl}}/api/documentos/{{documentoId}}" }
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/documentos/{{documentoId}}"
+          }
         },
         {
           "name": "Listar documentos",
-          "request": { "method": "GET", "header": [], "url": "{{baseUrl}}/api/documentos" }
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/documentos"
+          }
         },
         {
           "name": "Listar documentos filtrados",
-          "request": { "method": "GET", "header": [], "url": "{{baseUrl}}/api/documentos?clienteId={{clienteId}}&tipo=33&estado=BORRADOR" }
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/documentos?clienteId={{clienteId}}&tipo=33&estado=BORRADOR"
+          }
         },
         {
           "name": "Emitir factura 33",
-          "request": { "method": "POST", "header": [], "url": "{{baseUrl}}/api/documentos/{{documentoId}}/emitir" }
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": "{{baseUrl}}/api/documentos/{{documentoId}}/emitir"
+          }
         },
         {
           "name": "Eliminar detalle",
-          "request": { "method": "DELETE", "header": [], "url": "{{baseUrl}}/api/documentos/{{documentoId}}/detalles/{{detalleId}}" }
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": "{{baseUrl}}/api/documentos/{{documentoId}}/detalles/{{detalleId}}"
+          }
         }
       ]
     },
@@ -481,7 +844,12 @@
           ],
           "request": {
             "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
             "url": "{{baseUrl}}/api/documentos",
             "body": {
               "mode": "raw",
@@ -493,7 +861,12 @@
           "name": "Agregar detalle guia",
           "request": {
             "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
             "url": "{{baseUrl}}/api/documentos/{{guiaId}}/detalles",
             "body": {
               "mode": "raw",
@@ -505,7 +878,12 @@
           "name": "Guardar datos guia",
           "request": {
             "method": "PUT",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
             "url": "{{baseUrl}}/api/documentos/{{guiaId}}/guia-despacho",
             "body": {
               "mode": "raw",
@@ -515,11 +893,19 @@
         },
         {
           "name": "Emitir guia",
-          "request": { "method": "POST", "header": [], "url": "{{baseUrl}}/api/documentos/{{guiaId}}/emitir" }
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": "{{baseUrl}}/api/documentos/{{guiaId}}/emitir"
+          }
         },
         {
           "name": "Obtener guia",
-          "request": { "method": "GET", "header": [], "url": "{{baseUrl}}/api/documentos/{{guiaId}}" }
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/documentos/{{guiaId}}"
+          }
         }
       ]
     },
@@ -542,7 +928,12 @@
           ],
           "request": {
             "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
             "url": "{{baseUrl}}/api/documentos",
             "body": {
               "mode": "raw",
@@ -554,7 +945,12 @@
           "name": "Agregar referencia",
           "request": {
             "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
             "url": "{{baseUrl}}/api/documentos/{{notaCreditoId}}/referencias",
             "body": {
               "mode": "raw",
@@ -564,11 +960,19 @@
         },
         {
           "name": "Emitir nota credito",
-          "request": { "method": "POST", "header": [], "url": "{{baseUrl}}/api/documentos/{{notaCreditoId}}/emitir" }
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": "{{baseUrl}}/api/documentos/{{notaCreditoId}}/emitir"
+          }
         },
         {
           "name": "Obtener nota credito",
-          "request": { "method": "GET", "header": [], "url": "{{baseUrl}}/api/documentos/{{notaCreditoId}}" }
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/documentos/{{notaCreditoId}}"
+          }
         }
       ]
     }
