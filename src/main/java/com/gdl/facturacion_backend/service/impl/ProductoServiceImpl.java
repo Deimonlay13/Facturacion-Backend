@@ -4,25 +4,35 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import com.gdl.facturacion_backend.dto.ProductoRequest;
+import com.gdl.facturacion_backend.entity.EmpresaEntity;
 import com.gdl.facturacion_backend.entity.ProductoEntity;
+import com.gdl.facturacion_backend.exception.RecursoNoEncontradoException;
+import com.gdl.facturacion_backend.exception.ReglaNegocioException;
 import com.gdl.facturacion_backend.repository.ProductoRepository;
 import com.gdl.facturacion_backend.service.ProductoService;
+import com.gdl.facturacion_backend.service.TenantService;
 
 @Service
 public class ProductoServiceImpl implements ProductoService {
 
+    private final ProductoRepository repository;
+    private final TenantService tenantService;
+
     @Autowired
-    private ProductoRepository repository;
+    public ProductoServiceImpl(ProductoRepository repository, TenantService tenantService) {
+        this.repository = repository;
+        this.tenantService = tenantService;
+    }
 
     @Override
     public ProductoEntity create(ProductoRequest request) {
 
-        if (repository.existsByCodigo(request.getCodigo())) {
-            throw new RuntimeException("El código ya existe");
+        if (repository.existsByCodigoAndEmpresaId(request.getCodigo(), getEmpresaId())) {
+            throw new ReglaNegocioException("El código ya existe");
         }
 
         if (request.getPrecio() <= 0) {
-            throw new RuntimeException("El precio debe ser mayor a 0");
+            throw new ReglaNegocioException("El precio debe ser mayor a 0");
         }
 
         ProductoEntity producto = new ProductoEntity();
@@ -32,8 +42,9 @@ public class ProductoServiceImpl implements ProductoService {
         producto.setUnidadMedida(request.getUnidadMedida());
         producto.setPrecio(request.getPrecio());
         producto.setAfectaIva(request.getAfectaIva());
-        producto.setActivo(true); // siempre activo al crear
+        producto.setActivo(true);
 
+        producto.setEmpresa(empresaRef());
         return repository.save(producto);
     }
 
@@ -43,12 +54,12 @@ public class ProductoServiceImpl implements ProductoService {
         ProductoEntity producto = findById(id);
 
         if (!producto.getCodigo().equals(request.getCodigo()) &&
-            repository.existsByCodigo(request.getCodigo())) {
-            throw new RuntimeException("El código ya existe");
+            repository.existsByCodigoAndEmpresaId(request.getCodigo(), getEmpresaId())) {
+            throw new ReglaNegocioException("El código ya existe");
         }
 
         if (request.getPrecio() <= 0) {
-            throw new RuntimeException("El precio debe ser mayor a 0");
+            throw new ReglaNegocioException("El precio debe ser mayor a 0");
         }
 
         producto.setCodigo(request.getCodigo());
@@ -64,8 +75,8 @@ public class ProductoServiceImpl implements ProductoService {
 
     @Override
     public ProductoEntity findById(Long id) {
-        return repository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Producto no encontrado"));
+        return repository.findByIdAndEmpresaId(id, getEmpresaId())
+                .orElseThrow(() -> new RecursoNoEncontradoException("Producto no encontrado"));
     }
 
     @Override
@@ -73,5 +84,15 @@ public class ProductoServiceImpl implements ProductoService {
         ProductoEntity producto = findById(id);
         producto.setActivo(false);
         repository.save(producto);
+    }
+
+    private Long getEmpresaId() {
+        return tenantService.getEmpresaId();
+    }
+
+    private EmpresaEntity empresaRef() {
+        EmpresaEntity empresa = new EmpresaEntity();
+        empresa.setId(getEmpresaId());
+        return empresa;
     }
 }

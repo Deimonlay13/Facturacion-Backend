@@ -27,6 +27,12 @@ public class DocumentoTributarioController {
         return DocumentoResponse.from(service.crear(request));
     }
 
+    @PutMapping("/{id}")
+    public DocumentoDetailResponse actualizarBorrador(@PathVariable Long id,
+                                                      @Valid @RequestBody DocumentoUpdateRequest request) {
+        return DocumentoDetailResponse.from(service.actualizarBorrador(id, request));
+    }
+
     // consulta con filtros opcionales
     @GetMapping
     public List<DocumentoResponse> consultar(

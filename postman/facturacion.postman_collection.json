@@ -1,0 +1,576 @@
+{
+  "info": {
+    "name": "Facturación Backend - Colección completa",
+    "description": "Colección actualizada para probar el backend completo: empresa, roles, auth, clientes, productos, CAF/folios y documentos DTE. Orden recomendado: Setup -> Auth -> Clientes -> Productos -> Folios -> Documentos.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{token}}",
+        "type": "string"
+      }
+    ]
+  },
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "if (!pm.collectionVariables.get('runSuffix')) {",
+          "  const suffix = String(Date.now()).slice(-6);",
+          "  pm.collectionVariables.set('runSuffix', suffix);",
+          "  function rut(base) {",
+          "    const n = String(base + Number(suffix));",
+          "    let sum = 0;",
+          "    let mul = 2;",
+          "    for (let i = n.length - 1; i >= 0; i--) {",
+          "      sum += Number(n[i]) * mul;",
+          "      mul = mul === 7 ? 2 : mul + 1;",
+          "    }",
+          "    const r = 11 - (sum % 11);",
+          "    const dv = r === 11 ? '0' : r === 10 ? 'K' : String(r);",
+          "    return `${n}-${dv}`;",
+          "  }",
+          "  pm.collectionVariables.set('empresaRut', rut(77000000));",
+          "  pm.collectionVariables.set('clienteRut', rut(78000000));",
+          "  pm.collectionVariables.set('username', `qa_${suffix}`);",
+          "  pm.collectionVariables.set('password', 'Pass1234!');",
+          "  pm.collectionVariables.set('productoCodigo', `PROD-${suffix}`);",
+          "  pm.collectionVariables.set('caf33Desde', String(910000 + Number(suffix) % 1000));",
+          "  pm.collectionVariables.set('caf33Hasta', String(910002 + Number(suffix) % 1000));",
+          "  pm.collectionVariables.set('caf52Desde', String(920000 + Number(suffix) % 1000));",
+          "  pm.collectionVariables.set('caf52Hasta', String(920001 + Number(suffix) % 1000));",
+          "  pm.collectionVariables.set('caf61Desde', String(930000 + Number(suffix) % 1000));",
+          "  pm.collectionVariables.set('caf61Hasta', String(930001 + Number(suffix) % 1000));",
+          "}"
+        ]
+      }
+    }
+  ],
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:8080" },
+    { "key": "token", "value": "" },
+    { "key": "empresaId", "value": "" },
+    { "key": "clienteId", "value": "" },
+    { "key": "productoId", "value": "" },
+    { "key": "documentoId", "value": "" },
+    { "key": "detalleId", "value": "" },
+    { "key": "guiaId", "value": "" },
+    { "key": "notaCreditoId", "value": "" },
+    { "key": "runSuffix", "value": "" },
+    { "key": "empresaRut", "value": "" },
+    { "key": "clienteRut", "value": "" },
+    { "key": "username", "value": "" },
+    { "key": "password", "value": "" },
+    { "key": "productoCodigo", "value": "" },
+    { "key": "caf33Desde", "value": "" },
+    { "key": "caf33Hasta", "value": "" },
+    { "key": "caf52Desde", "value": "" },
+    { "key": "caf52Hasta", "value": "" },
+    { "key": "caf61Desde", "value": "" },
+    { "key": "caf61Hasta", "value": "" }
+  ],
+  "item": [
+    {
+      "name": "Setup",
+      "item": [
+        {
+          "name": "Tipos documento",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/tipos-documento"
+          }
+        },
+        {
+          "name": "Listar roles",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/roles"
+          }
+        },
+        {
+          "name": "Crear rol QA",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/roles",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nombre\": \"QA_{{runSuffix}}\",\n  \"nombreMostrar\": \"QA {{runSuffix}}\",\n  \"descripcion\": \"Rol de prueba\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Crear empresa",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const json = pm.response.json();",
+                  "if (json.id) pm.collectionVariables.set('empresaId', json.id);",
+                  "pm.test('empresa creada', () => pm.response.to.have.status(201));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/empresas",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"rutEmpresa\": \"{{empresaRut}}\",\n  \"razonSocial\": \"QA Empresa {{runSuffix}}\",\n  \"nombreFantasia\": \"QA\",\n  \"giro\": \"Software\",\n  \"direccion\": \"Av QA 123\",\n  \"ciudad\": \"Santiago\",\n  \"comuna\": \"Providencia\",\n  \"pais\": \"Chile\",\n  \"telefono\": \"+56911111111\",\n  \"sitioWeb\": \"https://qa.local\",\n  \"emailPrincipal\": \"qa@example.com\",\n  \"emailContabilidad\": \"contabilidad@example.com\",\n  \"rutRepresentante\": \"11111111-1\",\n  \"nombreRepresentante\": \"Representante QA\",\n  \"telefonoRepresentante\": \"+56922222222\"\n}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Signup",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const json = pm.response.json();",
+                  "if (json.token) pm.collectionVariables.set('token', json.token);",
+                  "pm.test('signup ok', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "X-Tenant-ID", "value": "{{empresaId}}" }
+            ],
+            "url": "{{baseUrl}}/auth/signup",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"{{username}}\",\n  \"password\": \"{{password}}\",\n  \"rol\": \"ROLE_USER\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const json = pm.response.json();",
+                  "if (json.token) pm.collectionVariables.set('token', json.token);",
+                  "pm.test('login ok', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/auth/login",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"{{username}}\",\n  \"password\": \"{{password}}\"\n}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Clientes",
+      "item": [
+        {
+          "name": "Crear cliente",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const json = pm.response.json();",
+                  "if (json.id) pm.collectionVariables.set('clienteId', json.id);",
+                  "pm.test('cliente creado', () => pm.response.to.have.status(201));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/clientes",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"rut\": \"{{clienteRut}}\",\n  \"razonSocial\": \"QA Cliente {{runSuffix}}\",\n  \"nombreFantasia\": \"QA Cliente\",\n  \"giro\": \"Comercio\",\n  \"direccion\": \"Calle Cliente 456\",\n  \"ciudad\": \"Santiago\",\n  \"comuna\": \"Nunoa\",\n  \"region\": \"RM\",\n  \"pais\": \"Chile\",\n  \"telefono\": \"+56933333333\",\n  \"email\": \"cliente@example.com\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Listar clientes",
+          "request": { "method": "GET", "header": [], "url": "{{baseUrl}}/clientes" }
+        },
+        {
+          "name": "Obtener cliente",
+          "request": { "method": "GET", "header": [], "url": "{{baseUrl}}/clientes/{{clienteId}}" }
+        },
+        {
+          "name": "Actualizar cliente",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/clientes/{{clienteId}}",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"rut\": \"{{clienteRut}}\",\n  \"razonSocial\": \"QA Cliente Actualizado {{runSuffix}}\",\n  \"nombreFantasia\": \"QA Cliente\",\n  \"giro\": \"Comercio\",\n  \"direccion\": \"Calle Cliente 789\",\n  \"ciudad\": \"Santiago\",\n  \"comuna\": \"Nunoa\",\n  \"region\": \"RM\",\n  \"pais\": \"Chile\",\n  \"telefono\": \"+56933333333\",\n  \"email\": \"cliente-upd@example.com\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Consultar SRE",
+          "request": { "method": "GET", "header": [], "url": "{{baseUrl}}/clientes/sre?rut=76883241-2" }
+        },
+        {
+          "name": "Descargar plantilla",
+          "request": { "method": "GET", "header": [], "url": "{{baseUrl}}/clientes/plantilla" }
+        },
+        {
+          "name": "Cargar plantilla",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": "{{baseUrl}}/clientes/cargar-plantilla",
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "archivo",
+                  "type": "file",
+                  "src": []
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Eliminar cliente",
+          "request": { "method": "DELETE", "header": [], "url": "{{baseUrl}}/clientes/{{clienteId}}" }
+        }
+      ]
+    },
+    {
+      "name": "Productos",
+      "item": [
+        {
+          "name": "Crear producto",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const json = pm.response.json();",
+                  "if (json.id) pm.collectionVariables.set('productoId', json.id);",
+                  "pm.test('producto creado', () => pm.response.to.have.status(201));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/productos",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"codigo\": \"{{productoCodigo}}\",\n  \"nombre\": \"Producto QA\",\n  \"descripcion\": \"Producto para prueba\",\n  \"unidadMedida\": \"UN\",\n  \"precio\": 1000,\n  \"afectaIva\": true,\n  \"activo\": true\n}"
+            }
+          }
+        },
+        {
+          "name": "Obtener producto",
+          "request": { "method": "GET", "header": [], "url": "{{baseUrl}}/productos/{{productoId}}" }
+        },
+        {
+          "name": "Actualizar producto",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/productos/{{productoId}}",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"codigo\": \"{{productoCodigo}}\",\n  \"nombre\": \"Producto QA Update\",\n  \"descripcion\": \"Producto actualizado\",\n  \"unidadMedida\": \"UN\",\n  \"precio\": 1200,\n  \"afectaIva\": true,\n  \"activo\": true\n}"
+            }
+          }
+        },
+        {
+          "name": "Eliminar producto",
+          "request": { "method": "DELETE", "header": [], "url": "{{baseUrl}}/productos/{{productoId}}" }
+        }
+      ]
+    },
+    {
+      "name": "Folios y CAF",
+      "item": [
+        {
+          "name": "Cargar CAF 33",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/api/folios/caf",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"codigoTipoDocumento\": 33,\n  \"rangoDesde\": {{caf33Desde}},\n  \"rangoHasta\": {{caf33Hasta}},\n  \"fechaAutorizacion\": \"2026-06-20\",\n  \"fechaVencimiento\": \"2027-06-20\",\n  \"cafXml\": \"<CAF><TIPO>33</TIPO></CAF>\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Cargar CAF 52",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/api/folios/caf",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"codigoTipoDocumento\": 52,\n  \"rangoDesde\": {{caf52Desde}},\n  \"rangoHasta\": {{caf52Hasta}},\n  \"fechaAutorizacion\": \"2026-06-20\",\n  \"fechaVencimiento\": \"2027-06-20\",\n  \"cafXml\": \"<CAF><TIPO>52</TIPO></CAF>\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Cargar CAF 61",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/api/folios/caf",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"codigoTipoDocumento\": 61,\n  \"rangoDesde\": {{caf61Desde}},\n  \"rangoHasta\": {{caf61Hasta}},\n  \"fechaAutorizacion\": \"2026-06-20\",\n  \"fechaVencimiento\": \"2027-06-20\",\n  \"cafXml\": \"<CAF><TIPO>61</TIPO></CAF>\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Listar CAF",
+          "request": { "method": "GET", "header": [], "url": "{{baseUrl}}/api/folios/caf" }
+        },
+        {
+          "name": "Listar control folios",
+          "request": { "method": "GET", "header": [], "url": "{{baseUrl}}/api/folios/control" }
+        }
+      ]
+    },
+    {
+      "name": "Documentos",
+      "item": [
+        {
+          "name": "Crear factura 33",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const json = pm.response.json();",
+                  "if (json.id) pm.collectionVariables.set('documentoId', json.id);",
+                  "pm.test('documento creado', () => pm.response.to.have.status(201));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/api/documentos",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"codigoTipoDocumento\": 33,\n  \"clienteId\": {{clienteId}}\n}"
+            }
+          }
+        },
+        {
+          "name": "Editar borrador",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/api/documentos/{{documentoId}}",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"clienteId\": {{clienteId}},\n  \"fechaVencimiento\": \"2026-07-20\",\n  \"observaciones\": \"Documento editado en borrador\",\n  \"moneda\": \"CLP\",\n  \"tipoCambio\": 1\n}"
+            }
+          }
+        },
+        {
+          "name": "Agregar detalle",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const json = pm.response.json();",
+                  "if (json.detalles && json.detalles.length) pm.collectionVariables.set('detalleId', json.detalles[json.detalles.length - 1].id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/api/documentos/{{documentoId}}/detalles",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"productoId\": {{productoId}},\n  \"descripcion\": \"Linea QA\",\n  \"cantidad\": 2,\n  \"unidadMedida\": \"UN\",\n  \"precioUnitario\": 1000\n}"
+            }
+          }
+        },
+        {
+          "name": "Obtener documento",
+          "request": { "method": "GET", "header": [], "url": "{{baseUrl}}/api/documentos/{{documentoId}}" }
+        },
+        {
+          "name": "Listar documentos",
+          "request": { "method": "GET", "header": [], "url": "{{baseUrl}}/api/documentos" }
+        },
+        {
+          "name": "Listar documentos filtrados",
+          "request": { "method": "GET", "header": [], "url": "{{baseUrl}}/api/documentos?clienteId={{clienteId}}&tipo=33&estado=BORRADOR" }
+        },
+        {
+          "name": "Emitir factura 33",
+          "request": { "method": "POST", "header": [], "url": "{{baseUrl}}/api/documentos/{{documentoId}}/emitir" }
+        },
+        {
+          "name": "Eliminar detalle",
+          "request": { "method": "DELETE", "header": [], "url": "{{baseUrl}}/api/documentos/{{documentoId}}/detalles/{{detalleId}}" }
+        }
+      ]
+    },
+    {
+      "name": "Guia despacho 52",
+      "item": [
+        {
+          "name": "Crear guia 52",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const json = pm.response.json();",
+                  "if (json.id) pm.collectionVariables.set('guiaId', json.id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/api/documentos",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"codigoTipoDocumento\": 52,\n  \"clienteId\": {{clienteId}}\n}"
+            }
+          }
+        },
+        {
+          "name": "Agregar detalle guia",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/api/documentos/{{guiaId}}/detalles",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"descripcion\": \"Traslado QA\",\n  \"cantidad\": 3,\n  \"unidadMedida\": \"UN\",\n  \"precioUnitario\": 500\n}"
+            }
+          }
+        },
+        {
+          "name": "Guardar datos guia",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/api/documentos/{{guiaId}}/guia-despacho",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"tipoTraslado\": \"TRASLADO_INTERNO\",\n  \"patente\": \"QA1234\",\n  \"rutTransportista\": \"11111111-1\",\n  \"nombreTransportista\": \"Transportista QA\",\n  \"direccionDestino\": \"Bodega destino 123\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Emitir guia",
+          "request": { "method": "POST", "header": [], "url": "{{baseUrl}}/api/documentos/{{guiaId}}/emitir" }
+        },
+        {
+          "name": "Obtener guia",
+          "request": { "method": "GET", "header": [], "url": "{{baseUrl}}/api/documentos/{{guiaId}}" }
+        }
+      ]
+    },
+    {
+      "name": "Notas credito/debito",
+      "item": [
+        {
+          "name": "Crear nota credito 61",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const json = pm.response.json();",
+                  "if (json.id) pm.collectionVariables.set('notaCreditoId', json.id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/api/documentos",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"codigoTipoDocumento\": 61,\n  \"clienteId\": {{clienteId}}\n}"
+            }
+          }
+        },
+        {
+          "name": "Agregar referencia",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/api/documentos/{{notaCreditoId}}/referencias",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"documentoReferenciadoId\": {{documentoId}},\n  \"tipoReferencia\": \"ANULA\",\n  \"motivo\": \"Prueba referencia QA\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Emitir nota credito",
+          "request": { "method": "POST", "header": [], "url": "{{baseUrl}}/api/documentos/{{notaCreditoId}}/emitir" }
+        },
+        {
+          "name": "Obtener nota credito",
+          "request": { "method": "GET", "header": [], "url": "{{baseUrl}}/api/documentos/{{notaCreditoId}}" }
+        }
+      ]
+    }
+  ]
+}

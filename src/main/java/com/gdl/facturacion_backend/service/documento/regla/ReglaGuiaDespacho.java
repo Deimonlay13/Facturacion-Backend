@@ -18,7 +18,7 @@ public class ReglaGuiaDespacho implements ReglaTributaria {
 
     @Override
     public BigDecimal tasaIva() {
-        return new BigDecimal("0.19");
+        return BigDecimal.ZERO;
     }
 
     @Override

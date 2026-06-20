@@ -1,6 +1,7 @@
 package com.gdl.facturacion_backend.controller;
 
-import com.gdl.facturacion_backend.dto.folio.ControlFolioRequest;
+import com.gdl.facturacion_backend.dto.folio.CafCargaRequest;
+import com.gdl.facturacion_backend.dto.folio.CafResponse;
 import com.gdl.facturacion_backend.dto.folio.ControlFolioResponse;
 import com.gdl.facturacion_backend.service.FolioService;
 import jakarta.validation.Valid;
@@ -19,10 +20,15 @@ public class FolioController {
         this.service = service;
     }
 
-    @PostMapping("/control")
+    @PostMapping("/caf")
     @ResponseStatus(HttpStatus.CREATED)
-    public ControlFolioResponse registrarControl(@Valid @RequestBody ControlFolioRequest request) {
-        return ControlFolioResponse.from(service.registrarControl(request));
+    public CafResponse cargarCaf(@Valid @RequestBody CafCargaRequest request) {
+        return service.cargarCaf(request);
+    }
+
+    @GetMapping("/caf")
+    public List<CafResponse> listarCafs() {
+        return service.listarCafs();
     }
 
     @GetMapping("/control")
