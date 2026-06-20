@@ -29,6 +29,11 @@ public class ProductoController {
         return service.create(request);
     }
 
+    @GetMapping
+    public java.util.List<ProductoEntity> findAll() {
+        return service.findAll();
+    }
+
     @PutMapping("/{id}")
     public ProductoEntity update(@PathVariable Long id,
                                  @RequestBody ProductoRequest request) {

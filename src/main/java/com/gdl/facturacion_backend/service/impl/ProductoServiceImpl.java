@@ -80,6 +80,11 @@ public class ProductoServiceImpl implements ProductoService {
     }
 
     @Override
+    public java.util.List<ProductoEntity> findAll() {
+        return repository.findAllByEmpresaId(getEmpresaId());
+    }
+
+    @Override
     public void delete(Long id) {
         ProductoEntity producto = findById(id);
         producto.setActivo(false);

@@ -3,6 +3,7 @@ package com.gdl.facturacion_backend.config;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.web.SecurityFilterChain;
@@ -29,11 +30,22 @@ public class SecurityConfig {
                 .csrf(csrf -> csrf.disable())
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .authorizeHttpRequests(auth -> auth
+                        // --- Público ---
                         .requestMatchers("/auth/**").permitAll()
-                        .requestMatchers("/empresas/**").permitAll()
-                        .requestMatchers("/roles/**").permitAll()
+                        .requestMatchers("/admin/**", "/", "/index.html", "/favicon.ico").permitAll()
+                        .requestMatchers("/swagger-ui/**", "/swagger-ui.html", "/v3/api-docs/**",
+                                "/swagger-resources/**", "/webjars/**").permitAll()
                         .requestMatchers("/api/tipos-documento/**").permitAll()
+                        // Crear empresa queda abierto para el bootstrap (sin empresa no hay token)
+                        .requestMatchers(HttpMethod.POST, "/empresas").permitAll()
 
+                        // --- Solo administradores ---
+                        .requestMatchers("/empresas/**").hasAnyAuthority("ROLE_SUPER_ADMIN", "ROLE_ADMIN")
+                        .requestMatchers("/roles/**").hasAnyAuthority("ROLE_SUPER_ADMIN", "ROLE_ADMIN")
+                        .requestMatchers("/usuarios/**").hasAnyAuthority("ROLE_SUPER_ADMIN", "ROLE_ADMIN")
+                        .requestMatchers("/api/folios/**").hasAnyAuthority("ROLE_SUPER_ADMIN", "ROLE_ADMIN")
+
+                        // --- Cualquier usuario autenticado (clientes, productos, documentos) ---
                         .anyRequest().authenticated())
                 .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);
 

@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Facturacion DTE - Administración</title>
+<style>
+  :root {
+    --bg: #0f161e; --panel: #18222e; --panel2: #1c2733; --border: #26333f;
+    --text: #dfe7ef; --muted: #8499ab; --accent: #5b9bd5; --link: #7fb2d8; --caption: #234458;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: "Inter", "Segoe UI", Roboto, Arial, sans-serif; background: var(--bg); color: var(--text); font-size: 14px; -webkit-font-smoothing: antialiased; }
+  a { color: var(--link); text-decoration: none; cursor: pointer; }
+  a:hover { color: #a9d0ec; }
+
+  header { background: #131c25; border-bottom: 1px solid var(--border); padding: 14px 26px; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 5; }
+  header h1 { margin: 0; font-size: 18px; font-weight: 600; color: #fff; letter-spacing: .3px; }
+  header .right { font-size: 12px; color: var(--muted); }
+  header .right a { color: #f3c969; margin-left: 12px; }
+
+  .layout { display: flex; min-height: calc(100vh - 53px); }
+  .sidebar { width: 240px; background: #131c25; border-right: 1px solid var(--border); padding: 12px 0; flex-shrink: 0; }
+  .sidebar a { display: block; color: #aab8c6; padding: 9px 22px; border-left: 3px solid transparent; }
+  .sidebar a:hover { background: #1d2a38; color: #fff; }
+  .sidebar a.active { background: #1d2a38; color: #fff; border-left-color: var(--accent); font-weight: 600; }
+  .sidebar .grp { color: #5e7488; font-size: 10.5px; text-transform: uppercase; letter-spacing: .08em; padding: 16px 22px 6px; }
+
+  .content { flex: 1; padding: 26px 32px; max-width: 1160px; }
+  h2 { font-weight: 500; color: #fff; margin: 2px 0 20px; font-size: 21px; }
+
+  .module { background: var(--panel); border: 1px solid var(--border); border-radius: 10px; margin-bottom: 20px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,.35); }
+  .module .caption { background: var(--caption); color: #cfe6f6; padding: 10px 16px; font-weight: 600; text-transform: uppercase; font-size: 11.5px; letter-spacing: .05em; display: block; }
+  table { width: 100%; border-collapse: collapse; }
+  .module th { background: var(--panel2); color: var(--muted); padding: 9px 16px; text-align: left; font-size: 11px; text-transform: uppercase; letter-spacing: .04em; border-bottom: 1px solid var(--border); }
+  .module td { padding: 11px 16px; border-bottom: 1px solid #202c39; }
+  .module tr:last-child td { border-bottom: none; }
+  .module tbody tr:hover td, .module tr:hover td { background: #1d2a38; }
+
+  .rowact a { margin-right: 12px; }
+  .btn { display: inline-block; background: #2a6f97; color: #fff !important; padding: 8px 16px; border: none; border-radius: 6px; cursor: pointer; font-size: 13px; font-weight: 500; }
+  .btn:hover { background: #3a83af; }
+  .btn.muted { background: #39495a; }
+  .toolbar { margin: 4px 0 14px; display: flex; justify-content: space-between; align-items: center; }
+  .crumbs { color: #6e8194; font-size: 12px; margin-bottom: 12px; }
+  .crumbs a { color: var(--link); }
+
+  input, select { background: #0e1620; color: var(--text); padding: 9px 11px; border: 1px solid #2c3a4a; border-radius: 6px; width: 100%; max-width: 440px; font-size: 14px; }
+  input:focus, select:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 2px rgba(91,155,213,.2); }
+  .field { margin-bottom: 14px; }
+  .field label { display: block; font-weight: 600; margin-bottom: 5px; font-size: 12px; color: var(--muted); }
+
+  .login { max-width: 380px; margin: 80px auto; background: var(--panel); border: 1px solid var(--border); border-radius: 12px; padding: 30px; box-shadow: 0 8px 30px rgba(0,0,0,.45); }
+  .login h2 { margin-top: 0; }
+  .err { color: #f08a8a; margin: 8px 0; min-height: 16px; }
+  .pill { padding: 3px 10px; border-radius: 20px; font-size: 11px; font-weight: 600; }
+  .pill.t { background: rgba(46,125,50,.22); color: #74cf7e; }
+  .pill.f { background: rgba(186,33,33,.22); color: #f08a8a; }
+  .small { font-size: 12px; color: var(--muted); }
+</style>
+</head>
+<body>
+<header>
+  <h1>Facturacion DTE</h1>
+  <div class="right" id="userbar"></div>
+</header>
+<main id="app"></main>
+
+<script>
+const API = location.origin;
+const REQUIRED_ROLE = "ROLE_SUPER_ADMIN";
+let TOKEN = localStorage.getItem("pm_token") || "";
+let USER  = localStorage.getItem("pm_user")  || "";
+let ROLE  = localStorage.getItem("pm_role")  || "";
+
+function roleFromToken(t){
+  try {
+    const payload = t.split(".")[1].replace(/-/g,"+").replace(/_/g,"/");
+    return JSON.parse(decodeURIComponent(escape(atob(payload)))).rol || null;
+  } catch(e){ return null; }
+}
+
+const GROUPS = ["Gestión", "Clientes y Productos", "Facturación"];
+const MODELS = {
+  empresas: { label:"Empresas", group:"Gestión", list:"/empresas",
+    cols:["id","rutEmpresa","razonSocial","nombreFantasia","activo"],
+    create:"/empresas", update:id=>`/empresas/${id}`, estado:id=>`/empresas/${id}/estado`, estadoMode:"query",
+    fields:["rutEmpresa","razonSocial","nombreFantasia","giro","direccion","ciudad","comuna","pais","telefono","sitioWeb","emailPrincipal","emailContabilidad","rutRepresentante","nombreRepresentante","telefonoRepresentante"] },
+  usuarios: { label:"Usuarios", group:"Gestión", list:"/usuarios",
+    cols:["id","username","rol","activo"],
+    create:"/usuarios", update:id=>`/usuarios/${id}`, estado:id=>`/usuarios/${id}/estado`, estadoMode:"body",
+    rol:id=>`/usuarios/${id}/rol`,
+    fields:["username","password","rol"], editFields:["username","password"],
+    selects:{ rol:"/roles" } },
+  roles: { label:"Roles", group:"Gestión", list:"/roles",
+    cols:["id","nombre","nombreMostrar","activo"],
+    create:"/roles", fields:["nombre","nombreMostrar","descripcion"] },
+  clientes: { label:"Clientes", group:"Clientes y Productos", list:"/clientes",
+    cols:["id","rut","razonSocial","email","activo"],
+    create:"/clientes", update:id=>`/clientes/${id}`, del:id=>`/clientes/${id}`,
+    fields:["rut","razonSocial","email","nombreFantasia","giro","direccion","ciudad","comuna","region","pais","telefono"] },
+  productos: { label:"Productos", group:"Clientes y Productos", list:"/productos",
+    cols:["id","codigo","nombre","precio","afectaIva","activo"],
+    create:"/productos", update:id=>`/productos/${id}`, del:id=>`/productos/${id}`,
+    fields:["codigo","nombre","descripcion","unidadMedida","precio","afectaIva","activo"],
+    types:{ precio:"number", afectaIva:"bool", activo:"bool" } },
+  documentos: { label:"Documentos", group:"Facturación", list:"/api/documentos",
+    cols:["id","codigoTipoDocumento","clienteRazonSocial","folio","estado","moneda","montoTotal"], readOnly:true },
+  tipos: { label:"Tipos de Documento", group:"Facturación", list:"/api/tipos-documento",
+    cols:["id","codigoSii","descripcion"], readOnly:true },
+  cafs: { label:"CAF", group:"Facturación", list:"/api/folios/caf", readOnly:true },
+  control: { label:"Control de Folios", group:"Facturación", list:"/api/folios/control", readOnly:true },
+};
+
+// ---------------------------------------------------------------- HTTP
+async function api(method, path, body) {
+  const opt = { method, headers: {} };
+  if (TOKEN) opt.headers["Authorization"] = "Bearer " + TOKEN;
+  if (body !== undefined) { opt.headers["Content-Type"] = "application/json"; opt.body = JSON.stringify(body); }
+  const res = await fetch(API + path, opt);
+  const text = await res.text();
+  let data = null; try { data = text ? JSON.parse(text) : null; } catch(e) { data = text; }
+  if (!res.ok) {
+    const msg = (data && (data.mensaje || data.error)) || ("HTTP " + res.status);
+    throw new Error(msg);
+  }
+  return data;
+}
+
+// ---------------------------------------------------------------- helpers
+const el = sel => document.querySelector(sel);
+function esc(v){ return String(v==null?"":v).replace(/[&<>"]/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;"}[c])); }
+function cell(v){
+  if (v===true)  return '<span class="pill t">Sí</span>';
+  if (v===false) return '<span class="pill f">No</span>';
+  if (v && typeof v === "object") return esc(JSON.stringify(v));
+  return esc(v);
+}
+function userbar(){
+  el("#userbar").innerHTML = TOKEN
+    ? `Hola, <b>${esc(USER)}</b> <span class="small">(${esc(ROLE)})</span> <a onclick="logout()">Cerrar sesión</a>`
+    : "";
+}
+// Pinta el cascarón con barra lateral + contenido
+function shell(activeKey, contentHtml){
+  let side = `<a class="${activeKey===null?'active':''}" onclick="showIndex()">Inicio</a>`;
+  for (const g of GROUPS){
+    const keys = Object.keys(MODELS).filter(k => MODELS[k].group === g);
+    if (!keys.length) continue;
+    side += `<div class="grp">${esc(g)}</div>`;
+    for (const k of keys){
+      side += `<a class="${activeKey===k?'active':''}" onclick="showList('${k}')">${esc(MODELS[k].label)}</a>`;
+    }
+  }
+  el("#app").innerHTML = `<div class="layout"><nav class="sidebar">${side}</nav><section class="content">${contentHtml}</section></div>`;
+}
+
+// ---------------------------------------------------------------- vistas
+function showLogin(){
+  userbar();
+  el("#app").innerHTML = `
+    <div class="login">
+      <h2>Iniciar sesión</h2>
+      <div class="field"><label>Usuario</label><input id="u" autofocus></div>
+      <div class="field"><label>Contraseña</label><input id="p" type="password"></div>
+      <div class="err" id="loginErr"></div>
+      <button class="btn" onclick="doLogin()">Entrar</button>
+    </div>`;
+  el("#p").addEventListener("keydown", e => { if (e.key==="Enter") doLogin(); });
+}
+async function doLogin(){
+  try {
+    const u = el("#u").value.trim(), p = el("#p").value;
+    const r = await api("POST", "/auth/login", { username:u, password:p });
+    const rol = roleFromToken(r.token);
+    if (rol !== REQUIRED_ROLE){
+      el("#loginErr").textContent = "Acceso denegado: solo usuarios SUPER_ADMIN pueden entrar al panel.";
+      return;
+    }
+    TOKEN = r.token; USER = u; ROLE = rol;
+    localStorage.setItem("pm_token", TOKEN); localStorage.setItem("pm_user", USER); localStorage.setItem("pm_role", ROLE);
+    showIndex();
+  } catch(e){ el("#loginErr").textContent = e.message; }
+}
+function logout(){ TOKEN=""; USER=""; ROLE="";
+  localStorage.removeItem("pm_token"); localStorage.removeItem("pm_user"); localStorage.removeItem("pm_role");
+  showLogin(); }
+
+function showIndex(){
+  if (!TOKEN || ROLE !== REQUIRED_ROLE) return showLogin();
+  userbar();
+  let html = `<h2>Bienvenido al Panel de Administración</h2>`;
+  for (const g of GROUPS){
+    const keys = Object.keys(MODELS).filter(k => MODELS[k].group === g);
+    if (!keys.length) continue;
+    html += `<div class="module"><span class="caption">${esc(g)}</span><table>`;
+    for (const k of keys){
+      const m = MODELS[k];
+      const add = m.create ? `<a onclick="showForm('${k}')">+ Agregar</a>` : `<span class="small">solo lectura</span>`;
+      html += `<tr><td><a onclick="showList('${k}')"><b>${esc(m.label)}</b></a></td>
+               <td style="text-align:right">${add}</td></tr>`;
+    }
+    html += `</table></div>`;
+  }
+  shell(null, html);
+}
+
+async function showList(key){
+  if (!TOKEN || ROLE !== REQUIRED_ROLE) return showLogin();
+  const m = MODELS[key];
+  userbar();
+  shell(key, `<div class="crumbs"><a onclick="showIndex()">Inicio</a> › ${esc(m.label)}</div>
+    <div class="toolbar"><h2>${esc(m.label)}</h2>${m.create?`<button class="btn" onclick="showForm('${key}')">+ Agregar</button>`:""}</div>
+    <div class="err" id="listErr"></div><div id="tbl">Cargando…</div>`);
+  try {
+    const rows = await api("GET", m.list) || [];
+    const cols = m.cols || (rows[0] ? Object.keys(rows[0]) : ["id"]);
+    const hasAct = m.update || m.del || m.estado || m.rol;
+    let h = `<div class="module"><table><tr>` +
+            cols.map(c=>`<th>${esc(c)}</th>`).join("") + (hasAct?`<th></th>`:"") + `</tr>`;
+    if (!rows.length) h += `<tr><td colspan="${cols.length+1}">Sin registros.</td></tr>`;
+    for (const r of rows){
+      h += `<tr>` + cols.map((c, i) => {
+        const v = cell(r[c]);
+        return (i === 0 && m.update)
+          ? `<td><a onclick='showForm("${key}", ${r.id})'><b>${v}</b></a></td>`
+          : `<td>${v}</td>`;
+      }).join("");
+      if (hasAct){
+        let a = `<td class="rowact" style="text-align:right">`;
+        if (m.update) a += `<a onclick='showForm("${key}", ${r.id})'>Editar</a>`;
+        if (m.rol)    a += `<a onclick='cambiarRol("${key}", ${r.id})'>Rol</a>`;
+        if (m.estado) a += `<a onclick='toggleEstado("${key}", ${r.id}, ${!!r.activo})'>${r.activo?"Desactivar":"Activar"}</a>`;
+        if (m.del)    a += `<a style="color:#ba2121" onclick='borrar("${key}", ${r.id})'>Eliminar</a>`;
+        h += a + `</td>`;
+      }
+      h += `</tr>`;
+    }
+    h += `</table></div>`;
+    el("#tbl").innerHTML = h;
+  } catch(e){ el("#listErr").textContent = e.message; el("#tbl").innerHTML=""; }
+}
+
+async function showForm(key, id){
+  if (!TOKEN || ROLE !== REQUIRED_ROLE) return showLogin();
+  const m = MODELS[key];
+  const editing = id != null;
+  const fields = (editing && m.editFields) ? m.editFields : m.fields;
+  userbar();
+  let row = {};
+  if (editing){
+    try { const all = await api("GET", m.list) || []; row = all.find(x => x.id === id) || {}; } catch(e){}
+  }
+  // Opciones para campos tipo lista (ej. rol desde /roles)
+  const selOpts = {};
+  if (m.selects){
+    for (const sf of Object.keys(m.selects)){
+      try { selOpts[sf] = await api("GET", m.selects[sf]) || []; } catch(e){ selOpts[sf] = []; }
+    }
+  }
+  let h = `<div class="crumbs"><a onclick="showIndex()">Inicio</a> › <a onclick="showList('${key}')">${esc(m.label)}</a> › ${editing?"Editar":"Agregar"}</div>
+    <h2>${editing?"Editar":"Agregar"} ${esc(m.label.replace(/s$/,""))}</h2>
+    <div class="err" id="formErr"></div><div class="module" style="padding:16px">`;
+  for (const f of fields){
+    const t = (m.types && m.types[f]) || "text";
+    const val = row[f];
+    if (m.selects && m.selects[f]){
+      const opts = selOpts[f] || [];
+      h += `<div class="field"><label>${esc(f)}</label><select id="f_${f}">` +
+        opts.map(o => `<option value="${esc(o.nombre)}" ${val===o.nombre?"selected":""}>${esc(o.nombreMostrar||o.nombre)} (${esc(o.nombre)})</option>`).join("") +
+        `</select></div>`;
+    } else if (t === "bool"){
+      h += `<div class="field"><label>${esc(f)}</label><select id="f_${f}">
+        <option value="true" ${val===true?"selected":""}>Sí</option>
+        <option value="false" ${val===false?"selected":""}>No</option></select></div>`;
+    } else {
+      const type = t==="number" ? "number" : (f==="password" ? "password" : "text");
+      h += `<div class="field"><label>${esc(f)}${f==="password"&&editing?" (dejar vacío = no cambiar)":""}</label>
+        <input id="f_${f}" type="${type}" value="${val==null?"":esc(val)}"></div>`;
+    }
+  }
+  h += `<button class="btn" onclick='saveForm("${key}", ${editing?id:null})'>Guardar</button>
+        <button class="btn muted" onclick="showList('${key}')">Cancelar</button></div>`;
+  shell(key, h);
+}
+
+async function saveForm(key, id){
+  const m = MODELS[key];
+  const editing = id != null;
+  const fields = (editing && m.editFields) ? m.editFields : m.fields;
+  const body = {};
+  for (const f of fields){
+    const node = el("#f_"+f); if (!node) continue;
+    let v = node.value;
+    const t = (m.types && m.types[f]) || "text";
+    if (t === "bool") v = (v === "true");
+    else if (t === "number") v = v===""? null : Number(v);
+    else if (v === "" && f === "password") continue;
+    body[f] = v;
+  }
+  try {
+    if (editing) await api("PUT", m.update(id), body);
+    else         await api("POST", m.create, body);
+    showList(key);
+  } catch(e){ el("#formErr").textContent = e.message; }
+}
+
+async function toggleEstado(key, id, activo){
+  const m = MODELS[key];
+  try {
+    if (m.estadoMode === "query") await api("PATCH", m.estado(id) + "?activo=" + (!activo));
+    else await api("PATCH", m.estado(id), { activo: !activo });
+    showList(key);
+  } catch(e){ alert(e.message); }
+}
+async function cambiarRol(key, id){
+  const nuevo = prompt("Nuevo rol (ej: ROLE_ADMIN, ROLE_USER):");
+  if (!nuevo) return;
+  try { await api("PATCH", MODELS[key].rol(id), { rol: nuevo.trim() }); showList(key); }
+  catch(e){ alert(e.message); }
+}
+async function borrar(key, id){
+  if (!confirm("¿Eliminar/desactivar el registro #" + id + "?")) return;
+  try { await api("DELETE", MODELS[key].del(id)); showList(key); }
+  catch(e){ alert(e.message); }
+}
+
+// ---------------------------------------------------------------- arranque
+if (TOKEN && roleFromToken(TOKEN) === REQUIRED_ROLE) showIndex(); else { logout(); }
+</script>
+</body>
+</html>

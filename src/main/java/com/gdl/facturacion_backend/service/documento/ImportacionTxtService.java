@@ -78,6 +78,10 @@ public class ImportacionTxtService {
             advertencias.add("El tipo de documento " + factura.codigoTipoDocumento()
                     + " no está soportado: " + e.getMessage());
         }
+        // Documentos en moneda extranjera (USD/EUR) son exentos de IVA.
+        if (!"CLP".equalsIgnoreCase(factura.moneda())) {
+            tasaIva = BigDecimal.ZERO;
+        }
 
         List<ImportTxtPreviewResponse.DetallePreview> detalles = new ArrayList<>();
         BigDecimal neto = BigDecimal.ZERO;
@@ -145,6 +149,11 @@ public class ImportacionTxtService {
         documento.setDetalles(detalles);
 
         calculoMontosService.recalcular(documento);
+        // Documentos en moneda extranjera (USD/EUR) son exentos de IVA.
+        if (documento.getMoneda() != Moneda.CLP) {
+            documento.setMontoIva(java.math.BigDecimal.ZERO);
+            documento.setMontoTotal(documento.getMontoNeto());
+        }
         return documentoRepository.save(documento);
     }
 
