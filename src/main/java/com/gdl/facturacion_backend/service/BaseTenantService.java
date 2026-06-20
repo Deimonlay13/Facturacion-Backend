@@ -2,19 +2,17 @@ package com.gdl.facturacion_backend.service;
 
 import java.util.List;
 import java.util.Optional;
-
-import org.springframework.data.jpa.repository.JpaRepository;
-
 import com.gdl.facturacion_backend.entity.BaseModelEntity;
 import com.gdl.facturacion_backend.entity.EmpresaEntity;
+import com.gdl.facturacion_backend.repository.BaseTenantRepository;
 
 public abstract class BaseTenantService<T extends BaseModelEntity> {
 
-    protected final JpaRepository<T, Long> repository;
+    protected final BaseTenantRepository<T> repository;
     protected final TenantService tenantService;
 
     protected BaseTenantService(
-            JpaRepository<T, Long> repository,
+            BaseTenantRepository<T> repository,
             TenantService tenantService) {
         this.repository = repository;
         this.tenantService = tenantService;
@@ -25,14 +23,19 @@ public abstract class BaseTenantService<T extends BaseModelEntity> {
     }
 
     public List<T> findAll() {
-        return repository.findAll();
+        return repository.findAllByEmpresaId(getEmpresaId());
     }
 
     public Optional<T> findById(Long id) {
-        return repository.findById(id);
+        return repository.findByIdAndEmpresaId(id, getEmpresaId());
     }
 
     public T save(T entity) {
+        if (entity.getId() != null) {
+            this.findById(entity.getId())
+                    .orElseThrow(() -> new RuntimeException("No tienes permiso sobre este registro"));
+        }
+
         EmpresaEntity empresa = new EmpresaEntity();
         empresa.setId(getEmpresaId());
         entity.setEmpresa(empresa);
