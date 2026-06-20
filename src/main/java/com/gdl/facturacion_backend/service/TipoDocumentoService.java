@@ -2,6 +2,7 @@ package com.gdl.facturacion_backend.service;
 
 import com.gdl.facturacion_backend.dto.tipoDocumento.TipoDocumentoResponseDto;
 import com.gdl.facturacion_backend.entity.TipoDocumentoEntity;
+import com.gdl.facturacion_backend.exception.RecursoNoEncontradoException;
 import com.gdl.facturacion_backend.repository.TipoDocumentoRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -23,7 +24,8 @@ public class TipoDocumentoService {
 
     public TipoDocumentoEntity findByCodigoSii(Integer codigoSii) {
         return repository.findByCodigoSii(codigoSii)
-                .orElseThrow(() -> new RuntimeException("Tipo de documento no existe"));
+                .orElseThrow(() -> new RecursoNoEncontradoException(
+                        "Tipo de documento no existe: " + codigoSii));
     }
 
     private TipoDocumentoResponseDto toResponse(TipoDocumentoEntity entity) {

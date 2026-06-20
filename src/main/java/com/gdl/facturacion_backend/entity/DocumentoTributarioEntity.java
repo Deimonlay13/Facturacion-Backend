@@ -4,6 +4,7 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
 
+import com.gdl.facturacion_backend.enums.EstadoDocumento;
 import com.gdl.facturacion_backend.enums.EstadoDocumentoSii;
 import com.gdl.facturacion_backend.enums.Moneda;
 
@@ -64,6 +65,10 @@ public class DocumentoTributarioEntity extends BaseModelEntity {
     private BigDecimal montoTotal;
 
     @Enumerated(EnumType.STRING)
+    @Column(name = "estado")
+    private EstadoDocumento estado;
+
+    @Enumerated(EnumType.STRING)
     @Column(name = "estado_sii")
     private EstadoDocumentoSii estadoSii;
 
@@ -79,6 +84,7 @@ public class DocumentoTributarioEntity extends BaseModelEntity {
 
     @OneToMany(mappedBy = "documento")
     private List<ReferenciaDocumentoEntity> referencias;
+
+    @OneToOne(mappedBy = "documento", cascade = CascadeType.ALL, orphanRemoval = true)
+    private GuiaDespachoExtraEntity guiaDespacho;
 }
-
-

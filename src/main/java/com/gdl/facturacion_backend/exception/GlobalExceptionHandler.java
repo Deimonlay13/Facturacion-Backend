@@ -28,6 +28,11 @@ public class GlobalExceptionHandler {
         return build(HttpStatus.NOT_FOUND, "No encontrado", ex.getMessage());
     }
 
+    @ExceptionHandler(ReglaNegocioException.class)
+    public ResponseEntity<ErrorResponse> handleReglaNegocio(ReglaNegocioException ex) {
+        return build(HttpStatus.BAD_REQUEST, "Regla de negocio", ex.getMessage());
+    }
+
     @ExceptionHandler(SreApiException.class)
     public ResponseEntity<ErrorResponse> handleSreApi(SreApiException ex) {
         return build(HttpStatus.BAD_GATEWAY, "Error al consultar SRE", ex.getMessage());
