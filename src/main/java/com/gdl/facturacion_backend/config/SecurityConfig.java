@@ -43,6 +43,7 @@ public class SecurityConfig {
                         .requestMatchers("/empresas/**").hasAnyAuthority("ROLE_SUPER_ADMIN", "ROLE_ADMIN")
                         .requestMatchers("/roles/**").hasAnyAuthority("ROLE_SUPER_ADMIN", "ROLE_ADMIN")
                         .requestMatchers("/usuarios/**").hasAnyAuthority("ROLE_SUPER_ADMIN", "ROLE_ADMIN")
+                        .requestMatchers("/auditoria/**").hasAnyAuthority("ROLE_SUPER_ADMIN", "ROLE_ADMIN")
                         .requestMatchers("/api/folios/**").hasAnyAuthority("ROLE_SUPER_ADMIN", "ROLE_ADMIN")
 
                         // --- Cualquier usuario autenticado (clientes, productos, documentos) ---

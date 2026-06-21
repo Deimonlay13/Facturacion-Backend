@@ -2,14 +2,18 @@ package com.gdl.facturacion_backend.config;
 
 import com.gdl.facturacion_backend.entity.EmpresaEntity;
 import com.gdl.facturacion_backend.entity.RolEntity;
+import com.gdl.facturacion_backend.entity.TipoDocumentoEntity;
 import com.gdl.facturacion_backend.entity.UsuarioEntity;
 import com.gdl.facturacion_backend.repository.EmpresaRepository;
 import com.gdl.facturacion_backend.repository.RolRepository;
+import com.gdl.facturacion_backend.repository.TipoDocumentoRepository;
 import com.gdl.facturacion_backend.repository.UsuarioRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
+
+import java.util.Map;
 
 /**
  * Carga de datos iniciales. Idempotente: solo crea lo que falte, por lo que es
@@ -21,9 +25,19 @@ public class DataSeeder implements CommandLineRunner {
 
     private static final String ROL_SUPER_ADMIN = "ROLE_SUPER_ADMIN";
 
+    // Tipos de documento tributario (DTE) esenciales del sistema
+    private static final Map<Integer, String> TIPOS_DOCUMENTO = Map.of(
+            33, "Factura Electrónica",
+            34, "Factura No Afecta o Exenta Electrónica",
+            52, "Guía de Despacho Electrónica",
+            56, "Nota de Débito Electrónica",
+            61, "Nota de Crédito Electrónica"
+    );
+
     private final RolRepository rolRepository;
     private final UsuarioRepository usuarioRepository;
     private final EmpresaRepository empresaRepository;
+    private final TipoDocumentoRepository tipoDocumentoRepository;
     private final PasswordEncoder passwordEncoder;
 
     @Override
@@ -34,7 +48,19 @@ public class DataSeeder implements CommandLineRunner {
                 "Administra usuarios, empresa y configuración");
         crearRolSiNoExiste("ROLE_USER", "Usuario",
                 "Acceso operativo estándar");
+        crearTiposDocumento();
         crearSuperUsuarioRoot();
+    }
+
+    private void crearTiposDocumento() {
+        TIPOS_DOCUMENTO.forEach((codigo, descripcion) -> {
+            if (!tipoDocumentoRepository.existsByCodigoSii(codigo)) {
+                TipoDocumentoEntity tipo = new TipoDocumentoEntity();
+                tipo.setCodigoSii(codigo);
+                tipo.setDescripcion(descripcion);
+                tipoDocumentoRepository.save(tipo);
+            }
+        });
     }
 
     private void crearRolSiNoExiste(String nombre, String nombreMostrar, String descripcion) {
