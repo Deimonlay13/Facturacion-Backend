@@ -13,6 +13,7 @@ import lombok.RequiredArgsConstructor;
 @RestController 
 @RequestMapping("/roles")
 @RequiredArgsConstructor 
+@io.swagger.v3.oas.annotations.tags.Tag(name = "Roles", description = "Roles del sistema")
 public class RolController {
 
     private final RolService rolService;

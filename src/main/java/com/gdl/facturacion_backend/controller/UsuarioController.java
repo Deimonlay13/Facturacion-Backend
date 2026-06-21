@@ -20,6 +20,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/usuarios")
 @RequiredArgsConstructor
+@io.swagger.v3.oas.annotations.tags.Tag(name = "Usuarios", description = "Gestión de usuarios de la empresa")
 public class UsuarioController {
 
     private final UsuarioService service;

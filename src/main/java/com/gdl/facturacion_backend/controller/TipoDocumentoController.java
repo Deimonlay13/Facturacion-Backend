@@ -10,6 +10,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/tipos-documento")
 @RequiredArgsConstructor
+@io.swagger.v3.oas.annotations.tags.Tag(name = "Tipos de Documento", description = "Catálogo de tipos de DTE")
 public class TipoDocumentoController {
 
     private final TipoDocumentoService service;

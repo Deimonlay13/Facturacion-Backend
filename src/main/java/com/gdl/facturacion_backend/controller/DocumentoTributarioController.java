@@ -23,6 +23,7 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/documentos")
+@io.swagger.v3.oas.annotations.tags.Tag(name = "Documentos", description = "Documentos tributarios (DTE): creación, detalle, emisión, PDF/XML e importación TXT")
 public class DocumentoTributarioController {
 
     private final DocumentoTributarioService service;

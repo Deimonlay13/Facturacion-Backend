@@ -13,6 +13,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/auditoria")
 @RequiredArgsConstructor
+@io.swagger.v3.oas.annotations.tags.Tag(name = "Auditoría", description = "Registro de acciones del sistema")
 public class AuditoriaController {
 
     private final AuditoriaRepository auditoriaRepository;

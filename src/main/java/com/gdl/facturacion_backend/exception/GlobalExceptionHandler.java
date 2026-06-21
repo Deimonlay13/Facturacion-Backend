@@ -1,5 +1,6 @@
 package com.gdl.facturacion_backend.exception;
 
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.FieldError;
@@ -31,6 +32,17 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(ReglaNegocioException.class)
     public ResponseEntity<ErrorResponse> handleReglaNegocio(ReglaNegocioException ex) {
         return build(HttpStatus.BAD_REQUEST, "Regla de negocio", ex.getMessage());
+    }
+
+    @ExceptionHandler(CredencialesInvalidasException.class)
+    public ResponseEntity<ErrorResponse> handleCredenciales(CredencialesInvalidasException ex) {
+        return build(HttpStatus.UNAUTHORIZED, "No autorizado", ex.getMessage());
+    }
+
+    @ExceptionHandler(DataIntegrityViolationException.class)
+    public ResponseEntity<ErrorResponse> handleIntegridad(DataIntegrityViolationException ex) {
+        return build(HttpStatus.CONFLICT, "Conflicto de datos",
+                "La operación viola una restricción de la base de datos (registro en uso o duplicado).");
     }
 
     @ExceptionHandler(SreApiException.class)
