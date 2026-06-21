@@ -1,7 +1,7 @@
 # Comandos rápidos del proyecto Facturación DTE
 # Uso:  make dev   |   make build   |   make jar   |   make stop   |   make restart
 
-.PHONY: dev run build jar stop restart backup restore
+.PHONY: dev run build jar stop restart backup restore backup-cron
 
 ## dev / run: levanta la app en modo desarrollo -> http://localhost:8080
 dev:
@@ -32,3 +32,7 @@ backup:
 ## restore: restaura un dump  ->  make restore f=backups/archivo.dump
 restore:
 	./scripts/restore.sh $(f)
+
+## backup-cron: programa un respaldo diario a las 03:00 (cron)
+backup-cron:
+	./scripts/cron-setup.sh
