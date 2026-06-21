@@ -231,18 +231,66 @@ async function showList(key){
   if (!TOKEN || ROLE !== REQUIRED_ROLE) return showLogin();
   const m = MODELS[key];
   userbar();
-  const acciones = (m.create ? `<button class="btn" onclick="showForm('${key}')">+ Agregar</button>` : "")
-    + (key === "documentos" ? ` <button class="btn muted" onclick="showImportTxt()">Importar TXT</button>` : "");
+  let filtrosHtml = "";
+  if (key === "documentos"){
+    let tipos = [], clientes = [];
+    try { tipos = await api("GET", "/api/tipos-documento") || []; } catch(e){}
+    try { clientes = await api("GET", "/clientes") || []; } catch(e){}
+    filtrosHtml = `<div class="module" style="padding:12px;margin-bottom:14px"><div style="display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end">
+      <div><label class="small">Tipo</label><br><select id="fTipo" style="max-width:210px"><option value="">Todos</option>${tipos.map(t=>`<option value="${t.codigoSii}">${esc(t.codigoSii+" - "+t.descripcion)}</option>`).join("")}</select></div>
+      <div><label class="small">Estado</label><br><select id="fEstado" style="max-width:150px"><option value="">Todos</option><option>BORRADOR</option><option>EMITIDO</option></select></div>
+      <div><label class="small">Cliente</label><br><select id="fCli" style="max-width:220px"><option value="">Todos</option>${clientes.map(c=>`<option value="${c.id}">${esc(c.razonSocial)}</option>`).join("")}</select></div>
+      <div><label class="small">Desde</label><br><input type="date" id="fDesde" style="max-width:160px"></div>
+      <div><label class="small">Hasta</label><br><input type="date" id="fHasta" style="max-width:160px"></div>
+      <button class="btn" onclick="aplicarFiltrosDoc()">Filtrar</button>
+      <button class="btn muted" onclick="showList('documentos')">Limpiar</button>
+    </div></div>`;
+  }
+  const acciones = `<button class="btn muted" onclick="exportCsv()">Exportar</button>`
+    + (m.create ? ` <button class="btn" onclick="showForm('${key}')">+ Agregar</button>` : "")
+    + (key === "documentos" ? ` <button class="btn" onclick="showNuevoDoc()">+ Nuevo</button> <button class="btn muted" onclick="showImportTxt()">Importar TXT</button>` : "");
   shell(key, `<div class="crumbs"><a onclick="showIndex()">Inicio</a> › ${esc(m.label)}</div>
     <div class="toolbar"><h2>${esc(m.label)}</h2>
-      <div><input id="listSearch" placeholder="Buscar…" style="max-width:220px;display:inline-block;margin-right:8px" oninput="listFilter(this.value)">${acciones}</div>
+      <div><input id="listSearch" placeholder="Buscar…" style="max-width:200px;display:inline-block;margin-right:8px" oninput="listFilter(this.value)">${acciones}</div>
     </div>
+    ${filtrosHtml}
     <div class="err" id="listErr"></div><div id="tbl">Cargando…</div>`);
   try {
     const rows = await api("GET", m.list) || [];
     LIST = { key, rows, filter:"", page:0, perPage:15 };
     renderTabla();
   } catch(e){ el("#listErr").textContent = e.message; el("#tbl").innerHTML=""; }
+}
+
+async function aplicarFiltrosDoc(){
+  const q = new URLSearchParams();
+  const t=el("#fTipo").value, e=el("#fEstado").value, c=el("#fCli").value, d=el("#fDesde").value, h=el("#fHasta").value;
+  if (t) q.set("tipo", t);
+  if (e) q.set("estado", e);
+  if (c) q.set("clienteId", c);
+  if (d) q.set("desde", d);
+  if (h) q.set("hasta", h);
+  try {
+    const rows = await api("GET", "/api/documentos" + (q.toString() ? "?"+q.toString() : "")) || [];
+    LIST = { key:"documentos", rows, filter:"", page:0, perPage:15 };
+    renderTabla();
+  } catch(err){ el("#listErr").textContent = err.message; }
+}
+
+function exportCsv(){
+  const m = MODELS[LIST.key];
+  const cols = m.cols || (LIST.rows[0] ? Object.keys(LIST.rows[0]) : ["id"]);
+  let data = LIST.rows;
+  if (LIST.filter){
+    const f = LIST.filter.toLowerCase();
+    data = data.filter(r => cols.some(c => String(r[c] ?? "").toLowerCase().includes(f)));
+  }
+  const q = v => { v = v==null ? "" : String(v); return /[",\n]/.test(v) ? '"'+v.replace(/"/g,'""')+'"' : v; };
+  const csv = [cols.join(",")].concat(data.map(r => cols.map(c => q(r[c])).join(","))).join("\n");
+  const blob = new Blob(["﻿"+csv], { type:"text/csv;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a"); a.href = url; a.download = LIST.key + ".csv"; a.click();
+  URL.revokeObjectURL(url);
 }
 
 function listFilter(v){ LIST.filter = v; LIST.page = 0; renderTabla(); }
@@ -303,23 +351,45 @@ async function showDetail(key, id){
   try {
     const d = await api("GET", m.detail(id));
     const doc = d.documento || d;
-    let h = `<h2>${esc(m.label)} #${esc(doc.id)}</h2><div class="module"><table>`;
+    const esDoc = key === "documentos";
+    const borrador = esDoc && doc.estado === "BORRADOR";
+    let h = `<h2>${esc(m.label)} #${esc(doc.id)}</h2>`;
+    if (esDoc){
+      h += `<div style="margin-bottom:14px">
+        <button class="btn muted" onclick='downloadFile("/api/documentos/${id}/pdf","documento_${id}.pdf")'>Descargar PDF</button>
+        <button class="btn muted" onclick='downloadFile("/api/documentos/${id}/xml","documento_${id}.xml")'>Descargar XML</button>
+        ${borrador ? `<button class="btn" onclick="emitirDoc(${id})">Emitir</button>` : ""}
+        <button class="btn muted" onclick="showList('documentos')">Volver</button>
+      </div>`;
+    }
+    h += `<div class="module"><table>`;
     for (const k of Object.keys(doc)){
       if (typeof doc[k] !== "object") h += `<tr><th style="width:240px">${esc(k)}</th><td>${cell(doc[k])}</td></tr>`;
     }
     h += `</table></div>`;
-    if (d.detalles && d.detalles.length){
-      h += `<div class="module"><span class="caption">Detalle (${d.detalles.length})</span><table>
-        <tr><th>#</th><th>Descripción</th><th>Cant.</th><th>P. Unit.</th><th>Subtotal</th></tr>`;
-      d.detalles.forEach((x,i)=> h += `<tr><td>${i+1}</td><td>${esc(x.descripcionItem)}</td><td>${cell(x.cantidad)}</td><td>${cell(x.precioUnitario)}</td><td>${cell(x.subtotal)}</td></tr>`);
+    if (esDoc || (d.detalles && d.detalles.length)){
+      const dets = d.detalles || [];
+      h += `<div class="module"><span class="caption">Detalle (${dets.length})</span><table>
+        <tr><th>#</th><th>Descripción</th><th>Cant.</th><th>P. Unit.</th><th>Subtotal</th>${borrador?"<th></th>":""}</tr>`;
+      if (!dets.length) h += `<tr><td colspan="${borrador?6:5}">Sin líneas.</td></tr>`;
+      dets.forEach((x,i)=> h += `<tr><td>${i+1}</td><td>${esc(x.descripcionItem)}</td><td>${cell(x.cantidad)}</td><td>${cell(x.precioUnitario)}</td><td>${cell(x.subtotal)}</td>${borrador?`<td style="text-align:right"><a style="color:#ba2121" onclick="eliminarLinea(${id}, ${x.id})">Eliminar</a></td>`:""}</tr>`);
       h += `</table></div>`;
+    }
+    if (borrador){
+      h += `<div class="module" style="padding:14px"><b>Agregar línea</b>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;margin-top:10px">
+          <div style="flex:1;min-width:240px"><label class="small">Descripción</label><input id="lnDesc"></div>
+          <div><label class="small">Cantidad</label><input id="lnCant" type="number" value="1" style="max-width:110px"></div>
+          <div><label class="small">P. Unitario</label><input id="lnPrecio" type="number" style="max-width:140px"></div>
+          <button class="btn" onclick="agregarLinea(${id})">Agregar</button>
+        </div></div>`;
     }
     if (d.referencias && d.referencias.length){
       h += `<div class="module"><span class="caption">Referencias</span><table>` +
         `<tr>${Object.keys(d.referencias[0]).map(k=>`<th>${esc(k)}</th>`).join("")}</tr>` +
         d.referencias.map(r=>`<tr>${Object.values(r).map(v=>`<td>${cell(v)}</td>`).join("")}</tr>`).join("") + `</table></div>`;
     }
-    h += `<button class="btn muted" onclick="showList('${key}')">Volver</button>`;
+    if (!esDoc) h += `<button class="btn muted" onclick="showList('${key}')">Volver</button>`;
     el("#det").innerHTML = h;
   } catch(e){ el("#det").innerHTML = `<div class="err">${esc(e.message)}</div>`; }
 }
@@ -458,6 +528,68 @@ async function borrar(key, id){
   if (!confirm("¿Eliminar/desactivar el registro #" + id + "?")) return;
   try { await api("DELETE", MODELS[key].del(id)); showList(key); }
   catch(e){ alert(e.message); }
+}
+
+// ---- Descargas (PDF/XML) con token ----
+async function downloadFile(path, filename){
+  try {
+    const res = await fetch(API + path, { headers: TOKEN ? {Authorization:"Bearer "+TOKEN} : {} });
+    if (!res.ok){
+      if ((res.status===401||res.status===403) && TOKEN){ logout(); return; }
+      alert("Error al descargar (HTTP " + res.status + ")"); return;
+    }
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a"); a.href = url; a.download = filename; a.click();
+    URL.revokeObjectURL(url);
+  } catch(e){ alert(e.message); }
+}
+
+// ---- Acciones de documentos ----
+async function emitirDoc(id){
+  if (!confirm("¿Emitir el documento #" + id + "? Asignará folio y pasará a EMITIDO.")) return;
+  try { await api("POST", `/api/documentos/${id}/emitir`); showDetail("documentos", id); }
+  catch(e){ alert(e.message); }
+}
+async function agregarLinea(id){
+  const desc = el("#lnDesc").value.trim(), cant = el("#lnCant").value, precio = el("#lnPrecio").value;
+  if (!desc || cant==="" || precio===""){ alert("Completa descripción, cantidad y precio."); return; }
+  try { await api("POST", `/api/documentos/${id}/detalles`, { descripcion:desc, cantidad:Number(cant), precioUnitario:Number(precio) }); showDetail("documentos", id); }
+  catch(e){ alert(e.message); }
+}
+async function eliminarLinea(id, detId){
+  if (!confirm("¿Eliminar la línea?")) return;
+  try { await api("DELETE", `/api/documentos/${id}/detalles/${detId}`); showDetail("documentos", id); }
+  catch(e){ alert(e.message); }
+}
+
+// ---- Crear documento desde el panel ----
+async function showNuevoDoc(){
+  if (!TOKEN || ROLE !== REQUIRED_ROLE) return showLogin();
+  userbar();
+  shell("documentos", `<div class="crumbs"><a onclick="showIndex()">Inicio</a> › <a onclick="showList('documentos')">Documentos</a> › Nuevo</div>
+    <h2>Nuevo documento</h2><div id="ndBox" class="module" style="padding:16px">Cargando…</div>`);
+  let tipos = [], clientes = [];
+  try { tipos = await api("GET", "/api/tipos-documento") || []; } catch(e){}
+  try { clientes = await api("GET", "/clientes") || []; } catch(e){}
+  el("#ndBox").innerHTML = `
+    <div class="field"><label>Tipo de documento</label><select id="ndTipo">${tipos.map(t=>`<option value="${t.codigoSii}">${esc(t.codigoSii+" - "+t.descripcion)}</option>`).join("")}</select></div>
+    <div class="field"><label>Cliente</label><select id="ndCli">${clientes.map(c=>`<option value="${c.id}">${esc(c.razonSocial)}</option>`).join("")}</select></div>
+    <div class="err" id="ndErr"></div>
+    <button class="btn" onclick="crearDoc()">Crear (BORRADOR)</button>
+    <button class="btn muted" onclick="showList('documentos')">Cancelar</button>
+    <p class="small">Luego podrás agregar las líneas y emitir el documento.</p>`;
+  if (!clientes.length) el("#ndErr").textContent = "No hay clientes en esta empresa. Crea un cliente primero.";
+}
+async function crearDoc(){
+  try {
+    const d = await api("POST", "/api/documentos", {
+      codigoTipoDocumento: Number(el("#ndTipo").value),
+      clienteId: Number(el("#ndCli").value)
+    });
+    const id = d.documento ? d.documento.id : d.id;
+    showDetail("documentos", id);
+  } catch(e){ el("#ndErr").textContent = e.message; }
 }
 
 // ---------------------------------------------------------------- arranque

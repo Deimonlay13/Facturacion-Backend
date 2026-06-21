@@ -33,8 +33,13 @@ make restore f=backups/facturacion_20260620_184500.dump
 Pide confirmación (escribir `si`) antes de sobrescribir, y usa
 `pg_restore --clean --if-exists` (reemplaza los objetos existentes).
 
-## Programarlo (opcional)
-Respaldo diario a las 03:00 con cron (`crontab -e`):
+## Programarlo (respaldo automático diario)
+Instala una tarea cron que corre el respaldo todos los días a las **03:00**:
+```bash
+make backup-cron        # o:  ./scripts/cron-setup.sh
+```
+Es idempotente (no duplica la entrada). Para revisar o quitar: `crontab -l` / `crontab -e`.
+La línea que instala es:
 ```cron
 0 3 * * * cd /ruta/al/proyecto && /bin/bash scripts/backup.sh >> backups/backup.log 2>&1
 ```
