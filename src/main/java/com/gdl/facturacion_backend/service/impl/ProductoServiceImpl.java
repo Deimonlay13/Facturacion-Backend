@@ -1,7 +1,9 @@
 package com.gdl.facturacion_backend.service.impl;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import com.gdl.facturacion_backend.dto.ProductoRequest;
 import com.gdl.facturacion_backend.entity.EmpresaEntity;
@@ -85,10 +87,15 @@ public class ProductoServiceImpl implements ProductoService {
     }
 
     @Override
+    @Transactional
     public void delete(Long id) {
         ProductoEntity producto = findById(id);
-        producto.setActivo(false);
-        repository.save(producto);
+        try {
+            repository.delete(producto);
+            repository.flush();
+        } catch (DataIntegrityViolationException e) {
+            throw new ReglaNegocioException("No se puede eliminar el producto: está en uso en documentos.");
+        }
     }
 
     private Long getEmpresaId() {

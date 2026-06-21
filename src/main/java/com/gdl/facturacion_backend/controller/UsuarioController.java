@@ -57,4 +57,10 @@ public class UsuarioController {
                                          @Valid @RequestBody CambiarEstadoRequest request) {
         return UsuarioResponse.from(service.cambiarEstado(id, request.getActivo()));
     }
+
+    @DeleteMapping("/{id}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void eliminar(@PathVariable Long id) {
+        service.eliminar(id);
+    }
 }

@@ -6,10 +6,13 @@ import com.gdl.facturacion_backend.dto.SreCompanyResponse;
 import com.gdl.facturacion_backend.entity.ClienteEntity;
 import com.gdl.facturacion_backend.exception.ClienteDuplicadoException;
 import com.gdl.facturacion_backend.exception.RecursoNoEncontradoException;
+import com.gdl.facturacion_backend.exception.ReglaNegocioException;
 import com.gdl.facturacion_backend.exception.RutInvalidoException;
 import com.gdl.facturacion_backend.repository.ClienteRepository;
 import com.gdl.facturacion_backend.util.RutUtils;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Optional;
@@ -76,6 +79,17 @@ public class ClienteService extends BaseTenantService<ClienteEntity> {
         ClienteEntity cliente = obtenerPorId(id);
         cliente.setActivo(false);
         save(cliente);
+    }
+
+    @Transactional
+    public void eliminar(Long id) {
+        ClienteEntity cliente = obtenerPorId(id);
+        try {
+            clienteRepository.delete(cliente);
+            clienteRepository.flush();
+        } catch (DataIntegrityViolationException e) {
+            throw new ReglaNegocioException("No se puede eliminar el cliente: tiene documentos asociados.");
+        }
     }
 
     /**

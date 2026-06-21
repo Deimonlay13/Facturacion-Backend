@@ -61,8 +61,8 @@ public class ClienteController {
 
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    public void desactivar(@PathVariable Long id) {
-        service.desactivar(id);
+    public void eliminar(@PathVariable Long id) {
+        service.eliminar(id);
     }
 
     /**

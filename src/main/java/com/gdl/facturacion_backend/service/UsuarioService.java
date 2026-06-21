@@ -140,6 +140,14 @@ public class UsuarioService {
         return usuarioRepository.save(usuario);
     }
 
+    public void eliminar(Long id) {
+        UsuarioEntity usuario = obtenerPorId(id);
+        if ("root".equalsIgnoreCase(usuario.getUsername())) {
+            throw new ReglaNegocioException("No se puede eliminar el super-usuario root.");
+        }
+        usuarioRepository.delete(usuario);
+    }
+
     private Long empresaIdActual() {
         Long empresaId = TenantContext.getEmpresaId();
         if (empresaId == null) {
