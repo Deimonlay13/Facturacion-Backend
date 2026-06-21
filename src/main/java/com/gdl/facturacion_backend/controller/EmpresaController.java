@@ -14,6 +14,7 @@ import jakarta.validation.Valid;
 
 @RestController
 @RequestMapping("/empresas")
+@io.swagger.v3.oas.annotations.tags.Tag(name = "Empresas", description = "Gestión de empresas (emisores)")
 public class EmpresaController {
 
     @Autowired

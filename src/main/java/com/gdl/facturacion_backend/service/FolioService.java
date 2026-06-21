@@ -83,6 +83,15 @@ public class FolioService extends BaseTenantService<ControlFolioEntity> {
         return findAll();
     }
 
+    public List<FolioEntity> listarFolios() {
+        return folioRepository.findAllByEmpresaId(getEmpresaId());
+    }
+
+    public org.springframework.data.domain.Page<FolioEntity> listarFoliosPaginado(
+            org.springframework.data.domain.Pageable pageable) {
+        return folioRepository.findByEmpresaId(getEmpresaId(), pageable);
+    }
+
     public List<CafResponse> listarCafs() {
         return cafRepository.findAllByEmpresaId(getEmpresaId()).stream()
                 .map(this::toCafResponse)

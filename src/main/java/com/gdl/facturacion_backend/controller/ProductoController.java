@@ -1,5 +1,7 @@
 package com.gdl.facturacion_backend.controller;
 
+import java.util.List;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -13,11 +15,15 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.gdl.facturacion_backend.dto.ProductoRequest;
-import com.gdl.facturacion_backend.entity.ProductoEntity;
+import com.gdl.facturacion_backend.dto.ProductoResponse;
 import com.gdl.facturacion_backend.service.ProductoService;
+
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 
 @RestController
 @RequestMapping("/productos")
+@Tag(name = "Productos", description = "Catálogo de productos/servicios de la empresa")
 public class ProductoController {
 
     @Autowired
@@ -25,28 +31,33 @@ public class ProductoController {
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    public ProductoEntity create(@RequestBody ProductoRequest request) {
-        return service.create(request);
+    @Operation(summary = "Crear producto")
+    public ProductoResponse create(@RequestBody ProductoRequest request) {
+        return ProductoResponse.from(service.create(request));
     }
 
     @GetMapping
-    public java.util.List<ProductoEntity> findAll() {
-        return service.findAll();
+    @Operation(summary = "Listar productos de la empresa")
+    public List<ProductoResponse> findAll() {
+        return service.findAll().stream().map(ProductoResponse::from).toList();
     }
 
     @PutMapping("/{id}")
-    public ProductoEntity update(@PathVariable Long id,
-                                 @RequestBody ProductoRequest request) {
-        return service.update(id, request);
+    @Operation(summary = "Editar producto")
+    public ProductoResponse update(@PathVariable Long id,
+                                   @RequestBody ProductoRequest request) {
+        return ProductoResponse.from(service.update(id, request));
     }
 
     @GetMapping("/{id}")
-    public ProductoEntity getById(@PathVariable Long id) {
-        return service.findById(id);
+    @Operation(summary = "Obtener producto por id")
+    public ProductoResponse getById(@PathVariable Long id) {
+        return ProductoResponse.from(service.findById(id));
     }
 
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
+    @Operation(summary = "Eliminar producto (bloquea si está en uso)")
     public void delete(@PathVariable Long id) {
         service.delete(id);
     }

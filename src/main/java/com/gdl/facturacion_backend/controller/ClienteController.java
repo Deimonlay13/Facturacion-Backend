@@ -21,6 +21,7 @@ import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/clientes")
+@io.swagger.v3.oas.annotations.tags.Tag(name = "Clientes", description = "Gestión de clientes, consulta SRE y carga masiva")
 public class ClienteController {
 
     private static final String[] PLANTILLA_HEADERS = {

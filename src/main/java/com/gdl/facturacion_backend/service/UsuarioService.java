@@ -9,6 +9,7 @@ import com.gdl.facturacion_backend.dto.usuario.UsuarioUpdateRequest;
 import com.gdl.facturacion_backend.entity.EmpresaEntity;
 import com.gdl.facturacion_backend.entity.RolEntity;
 import com.gdl.facturacion_backend.entity.UsuarioEntity;
+import com.gdl.facturacion_backend.exception.CredencialesInvalidasException;
 import com.gdl.facturacion_backend.exception.RecursoNoEncontradoException;
 import com.gdl.facturacion_backend.exception.ReglaNegocioException;
 import com.gdl.facturacion_backend.repository.UsuarioRepository;
@@ -31,6 +32,7 @@ public class UsuarioService {
     private final JwtService jwtService;
     private final EmpresaService empresaService;
     private final RolService roleService;
+    private final RefreshTokenService refreshTokenService;
 
     public AuthResponse register(RegisterRequest request) {
 
@@ -57,21 +59,21 @@ public class UsuarioService {
         usuarioRepository.save(usuario);
 
         String token = jwtService.generateToken(usuario.getUsername(), empresaId, role.getNombre());
-        return new AuthResponse(token);
+        return new AuthResponse(token, refreshTokenService.crear(usuario));
     }
 
     public AuthResponse login(LoginRequest request) {
         UsuarioEntity usuario = usuarioRepository.findByUsername(request.getUsername())
-                .orElseThrow(() -> new ReglaNegocioException("Credenciales inválidas"));
+                .orElseThrow(() -> new CredencialesInvalidasException("Usuario o contraseña inválidos"));
 
         if (!passwordEncoder.matches(request.getPassword(), usuario.getPasswordHash())) {
-            throw new ReglaNegocioException("Credenciales inválidas");
+            throw new CredencialesInvalidasException("Usuario o contraseña inválidos");
         }
 
         Long empresaId = usuario.getEmpresa().getId();
 
         String token = jwtService.generateToken(usuario.getUsername(), empresaId, usuario.getRol().getNombre());
-        return new AuthResponse(token);
+        return new AuthResponse(token, refreshTokenService.crear(usuario));
     }
 
     // ---------------------------------------------------------------------

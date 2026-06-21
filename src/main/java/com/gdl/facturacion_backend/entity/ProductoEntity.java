@@ -5,7 +5,10 @@ import lombok.Getter;
 import lombok.Setter;
 
 @Entity
-@Table(name = "productos")
+@Table(name = "productos", indexes = {
+        @Index(name = "idx_producto_empresa", columnList = "id_empresa"),
+        @Index(name = "idx_producto_empresa_codigo", columnList = "id_empresa,codigo")
+})
 @Getter
 @Setter
 public class ProductoEntity extends BaseModelEntity {

@@ -12,7 +12,10 @@ import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
 @Entity
-@Table(name = "documentos_tributarios")
+@Table(name = "documentos_tributarios", indexes = {
+        @Index(name = "idx_doc_empresa", columnList = "id_empresa"),
+        @Index(name = "idx_doc_empresa_cliente", columnList = "id_empresa,id_cliente")
+})
 @Getter
 @Setter
 public class DocumentoTributarioEntity extends BaseModelEntity {
