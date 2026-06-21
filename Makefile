@@ -1,7 +1,7 @@
 # Comandos rápidos del proyecto Facturación DTE
 # Uso:  make dev   |   make build   |   make jar   |   make stop   |   make restart
 
-.PHONY: dev run build jar stop restart
+.PHONY: dev run build jar stop restart backup restore
 
 ## dev / run: levanta la app en modo desarrollo -> http://localhost:8080
 dev:
@@ -24,3 +24,11 @@ stop:
 
 ## restart: para la instancia y la vuelve a levantar
 restart: stop dev
+
+## backup: respaldo de la BD con pg_dump (requiere DB_URL o .env) -> backups/
+backup:
+	./scripts/backup.sh
+
+## restore: restaura un dump  ->  make restore f=backups/archivo.dump
+restore:
+	./scripts/restore.sh $(f)
