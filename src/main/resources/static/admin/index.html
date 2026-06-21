@@ -57,6 +57,11 @@
   .pill.t { background: rgba(46,125,50,.22); color: #74cf7e; }
   .pill.f { background: rgba(186,33,33,.22); color: #f08a8a; }
   .small { font-size: 12px; color: var(--muted); }
+  .modal-ov { position: fixed; inset: 0; background: rgba(0,0,0,.6); display: flex; align-items: center; justify-content: center; z-index: 1000; }
+  .modal-box { background: var(--panel); border: 1px solid var(--border); border-radius: 10px; padding: 24px; max-width: 400px; box-shadow: 0 12px 48px rgba(0,0,0,.55); }
+  .form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 24px; }
+  .form-grid input, .form-grid select { max-width: none; width: 100%; }
+  @media (max-width: 760px) { .form-grid { grid-template-columns: 1fr; } }
 </style>
 </head>
 <body>
@@ -91,12 +96,12 @@ const MODELS = {
   usuarios: { label:"Usuarios", group:"Gestión", list:"/usuarios",
     cols:["id","username","rol","activo"],
     create:"/usuarios", update:id=>`/usuarios/${id}`, estado:id=>`/usuarios/${id}/estado`, estadoMode:"body",
-    rol:id=>`/usuarios/${id}/rol`,
+    rol:id=>`/usuarios/${id}/rol`, del:id=>`/usuarios/${id}`,
     fields:["username","password","rol"], editFields:["username","password"],
     selects:{ rol:"/roles" } },
   roles: { label:"Roles", group:"Gestión", list:"/roles",
     cols:["id","nombre","nombreMostrar","activo"],
-    create:"/roles", fields:["nombre","nombreMostrar","descripcion"] },
+    create:"/roles", del:id=>`/roles/${id}`, fields:["nombre","nombreMostrar","descripcion"] },
   clientes: { label:"Clientes", group:"Clientes y Productos", list:"/clientes",
     cols:["id","rut","razonSocial","email","activo"],
     create:"/clientes", update:id=>`/clientes/${id}`, del:id=>`/clientes/${id}`,
@@ -114,7 +119,8 @@ const MODELS = {
   cafs: { label:"CAF", group:"Facturación", list:"/api/folios/caf", readOnly:true },
   control: { label:"Control de Folios", group:"Facturación", list:"/api/folios/control", readOnly:true },
   auditoria: { label:"Auditoría", group:"Sistema", list:"/auditoria",
-    cols:["id","fecha","usuarioId","tabla","accion","detalle"], readOnly:true },
+    cols:["id","fecha","usuarioId","tabla","accion","detalle"], readOnly:true,
+    format:{ tabla:"humanize", accion:"humanize" } },
 };
 
 // ---------------------------------------------------------------- HTTP
@@ -149,9 +155,26 @@ async function apiUpload(path, file){
 // ---------------------------------------------------------------- helpers
 const el = sel => document.querySelector(sel);
 function esc(v){ return String(v==null?"":v).replace(/[&<>"]/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;"}[c])); }
+// Formatea fechas ISO (2026-06-20T21:16:01.581) a "2026-06-20 21:16:01"
+function fmtFecha(v){
+  if (typeof v === "string" && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/.test(v)){
+    const d = new Date(v);
+    if (!isNaN(d.getTime())){
+      const p = n => String(n).padStart(2,"0");
+      return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`;
+    }
+  }
+  return null;
+}
+// camelCase / PascalCase / snake_case -> texto legible ("agregarDetalle" -> "Agregar detalle")
+function humanize(s){
+  if (s==null) return "";
+  return String(s).replace(/([a-z0-9])([A-Z])/g,"$1 $2").replace(/_/g," ").toLowerCase().replace(/^./,c=>c.toUpperCase());
+}
 function cell(v){
   if (v===true)  return '<span class="pill t">Sí</span>';
   if (v===false) return '<span class="pill f">No</span>';
+  const f = fmtFecha(v); if (f) return esc(f);
   if (v && typeof v === "object") return esc(JSON.stringify(v));
   return esc(v);
 }
@@ -216,7 +239,10 @@ function showIndex(){
     html += `<div class="module"><span class="caption">${esc(g)}</span><table>`;
     for (const k of keys){
       const m = MODELS[k];
-      const add = m.create ? `<a onclick="showForm('${k}')">+ Agregar</a>` : `<span class="small">solo lectura</span>`;
+      let add;
+      if (m.create) add = `<a onclick="showForm('${k}')">+ Agregar</a>`;
+      else if (k === "documentos") add = `<a onclick="showNuevoDoc()">+ Nuevo</a>`;
+      else add = `<a onclick="showList('${k}')">Ver</a>`;
       html += `<tr><td><a onclick="showList('${k}')"><b>${esc(m.label)}</b></a></td>
                <td style="text-align:right">${add}</td></tr>`;
     }
@@ -251,7 +277,9 @@ async function showList(key){
     + (key === "documentos" ? ` <button class="btn" onclick="showNuevoDoc()">+ Nuevo</button> <button class="btn muted" onclick="showImportTxt()">Importar TXT</button>` : "");
   shell(key, `<div class="crumbs"><a onclick="showIndex()">Inicio</a> › ${esc(m.label)}</div>
     <div class="toolbar"><h2>${esc(m.label)}</h2>
-      <div><input id="listSearch" placeholder="Buscar…" style="max-width:200px;display:inline-block;margin-right:8px" oninput="listFilter(this.value)">${acciones}</div>
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:nowrap">
+        <input id="listSearch" placeholder="Buscar…" style="max-width:200px" oninput="listFilter(this.value)">${acciones}
+      </div>
     </div>
     ${filtrosHtml}
     <div class="err" id="listErr"></div><div id="tbl">Cargando…</div>`);
@@ -312,11 +340,11 @@ function renderTabla(){
   const slice = data.slice(LIST.page*LIST.perPage, (LIST.page+1)*LIST.perPage);
 
   let h = `<div class="module"><table><tr>` +
-          cols.map(c=>`<th>${esc(c)}</th>`).join("") + (hasAct?`<th></th>`:"") + `</tr>`;
+          cols.map(c=>`<th>${esc(humanize(c))}</th>`).join("") + (hasAct?`<th></th>`:"") + `</tr>`;
   if (!slice.length) h += `<tr><td colspan="${cols.length+1}">Sin registros.</td></tr>`;
   for (const r of slice){
     h += `<tr>` + cols.map((c, i) => {
-      const v = cell(r[c]);
+      const v = (m.format && m.format[c]) ? esc(humanize(r[c])) : cell(r[c]);
       if (i === 0 && m.update) return `<td><a onclick='showForm("${LIST.key}", ${r.id})'><b>${v}</b></a></td>`;
       if (i === 0 && m.detail) return `<td><a onclick='showDetail("${LIST.key}", ${r.id})'><b>${v}</b></a></td>`;
       return `<td>${v}</td>`;
@@ -465,27 +493,27 @@ async function showForm(key, id){
   }
   let h = `<div class="crumbs"><a onclick="showIndex()">Inicio</a> › <a onclick="showList('${key}')">${esc(m.label)}</a> › ${editing?"Editar":"Agregar"}</div>
     <h2>${editing?"Editar":"Agregar"} ${esc(m.label.replace(/s$/,""))}</h2>
-    <div class="err" id="formErr"></div><div class="module" style="padding:16px">`;
+    <div class="err" id="formErr"></div><div class="module" style="padding:18px"><div class="form-grid">`;
   for (const f of fields){
     const t = (m.types && m.types[f]) || "text";
     const val = row[f];
     if (m.selects && m.selects[f]){
       const opts = selOpts[f] || [];
-      h += `<div class="field"><label>${esc(f)}</label><select id="f_${f}">` +
+      h += `<div class="field"><label>${esc(humanize(f))}</label><select id="f_${f}">` +
         opts.map(o => `<option value="${esc(o.nombre)}" ${val===o.nombre?"selected":""}>${esc(o.nombreMostrar||o.nombre)} (${esc(o.nombre)})</option>`).join("") +
         `</select></div>`;
     } else if (t === "bool"){
-      h += `<div class="field"><label>${esc(f)}</label><select id="f_${f}">
+      h += `<div class="field"><label>${esc(humanize(f))}</label><select id="f_${f}">
         <option value="true" ${val===true?"selected":""}>Sí</option>
         <option value="false" ${val===false?"selected":""}>No</option></select></div>`;
     } else {
       const type = t==="number" ? "number" : (f==="password" ? "password" : "text");
-      h += `<div class="field"><label>${esc(f)}${f==="password"&&editing?" (dejar vacío = no cambiar)":""}</label>
+      h += `<div class="field"><label>${esc(humanize(f))}${f==="password"&&editing?" (dejar vacío = no cambiar)":""}</label>
         <input id="f_${f}" type="${type}" value="${val==null?"":esc(val)}"></div>`;
     }
   }
-  h += `<button class="btn" onclick='saveForm("${key}", ${editing?id:null})'>Guardar</button>
-        <button class="btn muted" onclick="showList('${key}')">Cancelar</button></div>`;
+  h += `</div><div style="margin-top:8px"><button class="btn" onclick='saveForm("${key}", ${editing?id:null})'>Guardar</button>
+        <button class="btn muted" onclick="showList('${key}')">Cancelar</button></div></div>`;
   shell(key, h);
 }
 
@@ -524,8 +552,26 @@ async function cambiarRol(key, id){
   try { await api("PATCH", MODELS[key].rol(id), { rol: nuevo.trim() }); showList(key); }
   catch(e){ alert(e.message); }
 }
+// Modal de confirmación (reemplaza al confirm() del navegador)
+function confirmar(mensaje){
+  return new Promise(resolve => {
+    const ov = document.createElement("div");
+    ov.className = "modal-ov";
+    ov.innerHTML = `<div class="modal-box">
+      <div style="font-size:15px;line-height:1.45;margin-bottom:20px">${esc(mensaje)}</div>
+      <div style="text-align:right">
+        <button class="btn muted" id="cfNo">Cancelar</button>
+        <button class="btn" id="cfYes" style="background:#ba2121">Eliminar</button>
+      </div></div>`;
+    document.body.appendChild(ov);
+    const close = v => { ov.remove(); resolve(v); };
+    ov.querySelector("#cfNo").onclick = () => close(false);
+    ov.querySelector("#cfYes").onclick = () => close(true);
+    ov.onclick = e => { if (e.target === ov) close(false); };
+  });
+}
 async function borrar(key, id){
-  if (!confirm("¿Eliminar/desactivar el registro #" + id + "?")) return;
+  if (!(await confirmar("¿Seguro que quieres eliminar el registro #" + id + "? Esta acción no se puede deshacer."))) return;
   try { await api("DELETE", MODELS[key].del(id)); showList(key); }
   catch(e){ alert(e.message); }
 }

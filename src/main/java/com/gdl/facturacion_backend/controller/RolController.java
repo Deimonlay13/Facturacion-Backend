@@ -1,5 +1,6 @@
 package com.gdl.facturacion_backend.controller;
 
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -24,5 +25,11 @@ public class RolController {
     @GetMapping
     public ResponseEntity<?> listar() {
         return ResponseEntity.ok(rolService.findAll());
+    }
+
+    @DeleteMapping("/{id}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void eliminar(@PathVariable Long id) {
+        rolService.eliminar(id);
     }
 }
