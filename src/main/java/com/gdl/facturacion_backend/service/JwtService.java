@@ -8,6 +8,7 @@ import org.springframework.stereotype.Service;
 import javax.crypto.SecretKey;
 import java.nio.charset.StandardCharsets;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.Map;
 
 @Service
@@ -27,10 +28,15 @@ public class JwtService {
     public String generateToken(String username, Long empresaId, String rol) {
         Date now = new Date();
         Date expiration = new Date(now.getTime() + expirationMs);
+        Map<String, Object> claims = new HashMap<>();
+        claims.put("rol", rol);
+        if (empresaId != null) {
+            claims.put("empresaId", empresaId);
+        }
 
         return Jwts.builder()
                 .subject(username)
-                .claims(Map.of("empresaId", empresaId, "rol", rol))
+                .claims(claims)
                 .issuedAt(now)
                 .expiration(expiration)
                 .signWith(getSigningKey())

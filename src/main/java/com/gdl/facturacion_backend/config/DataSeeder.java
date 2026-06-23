@@ -1,10 +1,8 @@
 package com.gdl.facturacion_backend.config;
 
-import com.gdl.facturacion_backend.entity.EmpresaEntity;
 import com.gdl.facturacion_backend.entity.RolEntity;
 import com.gdl.facturacion_backend.entity.TipoDocumentoEntity;
 import com.gdl.facturacion_backend.entity.UsuarioEntity;
-import com.gdl.facturacion_backend.repository.EmpresaRepository;
 import com.gdl.facturacion_backend.repository.RolRepository;
 import com.gdl.facturacion_backend.repository.TipoDocumentoRepository;
 import com.gdl.facturacion_backend.repository.UsuarioRepository;
@@ -25,7 +23,6 @@ public class DataSeeder implements CommandLineRunner {
 
     private static final String ROL_SUPER_ADMIN = "ROLE_SUPER_ADMIN";
 
-    // Tipos de documento tributario (DTE) esenciales del sistema
     private static final Map<Integer, String> TIPOS_DOCUMENTO = Map.of(
             33, "Factura Electrónica",
             34, "Factura No Afecta o Exenta Electrónica",
@@ -36,7 +33,6 @@ public class DataSeeder implements CommandLineRunner {
 
     private final RolRepository rolRepository;
     private final UsuarioRepository usuarioRepository;
-    private final EmpresaRepository empresaRepository;
     private final TipoDocumentoRepository tipoDocumentoRepository;
     private final PasswordEncoder passwordEncoder;
 
@@ -48,6 +44,7 @@ public class DataSeeder implements CommandLineRunner {
                 "Administra usuarios, empresa y configuración");
         crearRolSiNoExiste("ROLE_USER", "Usuario",
                 "Acceso operativo estándar");
+        quitarEmpresaDeSuperAdministradores();
         crearTiposDocumento();
         crearSuperUsuarioRoot();
     }
@@ -76,15 +73,9 @@ public class DataSeeder implements CommandLineRunner {
         rolRepository.save(rol);
     }
 
-    /** Super usuario root / 1234 — único que puede entrar al panel de administración. */
     private void crearSuperUsuarioRoot() {
         if (usuarioRepository.existsByUsername("root")) {
             return;
-        }
-        // La entidad Usuario requiere empresa (id_empresa). Se asocia a la primera empresa.
-        EmpresaEntity empresa = empresaRepository.findAll().stream().findFirst().orElse(null);
-        if (empresa == null) {
-            return; // sin empresas todavía; se creará en el próximo arranque
         }
         RolEntity rol = rolRepository.findByNombre(ROL_SUPER_ADMIN).orElseThrow();
 
@@ -93,7 +84,12 @@ public class DataSeeder implements CommandLineRunner {
         root.setPasswordHash(passwordEncoder.encode("1234"));
         root.setActivo(true);
         root.setRol(rol);
-        root.setEmpresa(empresa);
         usuarioRepository.save(root);
+    }
+
+    private void quitarEmpresaDeSuperAdministradores() {
+        var superAdministradores = usuarioRepository.findAllByRolNombre(ROL_SUPER_ADMIN);
+        superAdministradores.forEach(usuario -> usuario.setEmpresa(null));
+        usuarioRepository.saveAll(superAdministradores);
     }
 }

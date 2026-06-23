@@ -10,6 +10,8 @@ import lombok.Setter;
 @Setter
 public class UsuarioEntity extends BaseModelEntity {
 
+    private static final String ROL_SUPER_ADMIN = "ROLE_SUPER_ADMIN";
+
     @Column(unique = true, nullable = false)
     private String username;
 
@@ -21,4 +23,9 @@ public class UsuarioEntity extends BaseModelEntity {
     @ManyToOne
     @JoinColumn(name = "id_rol")
     private RolEntity rol;
+
+    @Override
+    protected boolean requiereEmpresa() {
+        return rol == null || !ROL_SUPER_ADMIN.equals(rol.getNombre());
+    }
 }
