@@ -51,7 +51,7 @@ public class RefreshTokenService {
 
         String access = jwtService.generateToken(
                 usuario.getUsername(),
-                usuario.getEmpresa().getId(),
+                usuario.getEmpresa() != null ? usuario.getEmpresa().getId() : null,
                 usuario.getRol().getNombre());
 
         return new AuthResponse(access, token);

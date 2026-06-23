@@ -24,6 +24,7 @@ import java.util.List;
 @RequiredArgsConstructor
 public class UsuarioService {
 
+    private static final String ROL_SUPER_ADMIN = "ROLE_SUPER_ADMIN";
     private static final String ROL_ADMIN = "ROLE_ADMIN";
     private static final String ROL_USER = "ROLE_USER";
 
@@ -70,7 +71,7 @@ public class UsuarioService {
             throw new CredencialesInvalidasException("Usuario o contraseña inválidos");
         }
 
-        Long empresaId = usuario.getEmpresa().getId();
+        Long empresaId = usuario.getEmpresa() != null ? usuario.getEmpresa().getId() : null;
 
         String token = jwtService.generateToken(usuario.getUsername(), empresaId, usuario.getRol().getNombre());
         return new AuthResponse(token, refreshTokenService.crear(usuario));
@@ -94,12 +95,13 @@ public class UsuarioService {
             throw new ReglaNegocioException("El nombre de usuario ya está en uso");
         }
 
-        Long empresaId = empresaIdActual();
-        EmpresaEntity empresa = empresaService.findById(empresaId);
-
         String nombreRol = (request.getRol() != null && !request.getRol().isBlank())
                 ? request.getRol() : ROL_USER;
         RolEntity rol = roleService.findByNombre(nombreRol);
+        EmpresaEntity empresa = null;
+        if (!ROL_SUPER_ADMIN.equals(rol.getNombre())) {
+            empresa = empresaService.findById(empresaIdActual());
+        }
 
         UsuarioEntity usuario = new UsuarioEntity();
         usuario.setUsername(request.getUsername());
@@ -133,6 +135,11 @@ public class UsuarioService {
         UsuarioEntity usuario = obtenerPorId(id);
         RolEntity rol = roleService.findByNombre(nombreRol);
         usuario.setRol(rol);
+        if (ROL_SUPER_ADMIN.equals(rol.getNombre())) {
+            usuario.setEmpresa(null);
+        } else if (usuario.getEmpresa() == null) {
+            usuario.setEmpresa(empresaService.findById(empresaIdActual()));
+        }
         return usuarioRepository.save(usuario);
     }
 

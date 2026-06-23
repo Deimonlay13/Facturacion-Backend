@@ -39,7 +39,7 @@ public abstract class BaseModelEntity {
         createdAt = OffsetDateTime.now();
         updatedAt = OffsetDateTime.now();
 
-        if (empresa == null) {
+        if (empresa == null && requiereEmpresa()) {
 
             Long empresaId = TenantContext.getEmpresaId();
 
@@ -52,6 +52,10 @@ public abstract class BaseModelEntity {
 
             this.empresa = emp;
         }
+    }
+
+    protected boolean requiereEmpresa() {
+        return true;
     }
 
     @PreUpdate

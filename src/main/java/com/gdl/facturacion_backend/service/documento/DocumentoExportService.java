@@ -4,6 +4,7 @@ import com.gdl.facturacion_backend.entity.ClienteEntity;
 import com.gdl.facturacion_backend.entity.DetalleDocumentoEntity;
 import com.gdl.facturacion_backend.entity.DocumentoTributarioEntity;
 import com.gdl.facturacion_backend.entity.EmpresaEntity;
+import com.gdl.facturacion_backend.entity.ReferenciaDocumentoEntity;
 import com.gdl.facturacion_backend.exception.RecursoNoEncontradoException;
 import com.gdl.facturacion_backend.repository.EmpresaRepository;
 import com.gdl.facturacion_backend.service.DocumentoTributarioService;
@@ -28,6 +29,11 @@ import javax.xml.transform.dom.DOMSource;
 import javax.xml.transform.stream.StreamResult;
 import java.io.ByteArrayOutputStream;
 import java.math.BigDecimal;
+import java.awt.Color;
+import java.text.NumberFormat;
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
+import java.util.Locale;
 import java.util.List;
 
 /**
@@ -130,14 +136,25 @@ public class DocumentoExportService {
     // ============================================================== PDF
     public byte[] generarPdf(Long id) {
         DocumentoTributarioEntity doc = documentoService.obtenerDetalle(id);
+        return DocumentoPdfGenerator.generar(doc, emisor());
+    }
+
+    @SuppressWarnings("unused")
+    private byte[] generarPdfLegacy(Long id) {
+        DocumentoTributarioEntity doc = documentoService.obtenerDetalle(id);
         EmpresaEntity emisor = emisor();
         ClienteEntity receptor = doc.getCliente();
 
-        Font h1 = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 15);
-        Font label = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 9);
-        Font normal = FontFactory.getFont(FontFactory.HELVETICA, 9);
+        Color rojoSii = new Color(190, 30, 45);
+        Color gris = new Color(235, 238, 241);
+        Color borde = new Color(125, 125, 125);
+        Font h1 = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 13);
+        Font label = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 7.5f);
+        Font normal = FontFactory.getFont(FontFactory.HELVETICA, 7.5f);
+        Font siiFont = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 12, rojoSii);
+        Font folioFont = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 15, rojoSii);
 
-        Document pdf = new Document(PageSize.A4, 40, 40, 40, 40);
+        Document pdf = new Document(PageSize.A4, 28, 28, 25, 25);
         ByteArrayOutputStream out = new ByteArrayOutputStream();
         PdfWriter.getInstance(pdf, out);
         pdf.open();
@@ -145,57 +162,166 @@ public class DocumentoExportService {
         String titulo = doc.getTipoDocumento().getDescripcion() != null
                 ? doc.getTipoDocumento().getDescripcion()
                 : "Documento " + doc.getTipoDocumento().getCodigoSii();
-        String folio = doc.getFolio() != null ? "N° " + doc.getFolio() : "(BORRADOR sin folio)";
-        Paragraph tituloPar = new Paragraph(titulo + "  " + folio, h1);
-        tituloPar.setAlignment(Element.ALIGN_CENTER);
-        pdf.add(tituloPar);
-        pdf.add(new Paragraph(" ", normal));
+        String folio = doc.getFolio() != null ? String.valueOf(doc.getFolio()) : "BORRADOR";
 
-        pdf.add(new Paragraph("EMISOR", label));
-        pdf.add(new Paragraph(val(doc.getRazonSocialEmisor(), emisor.getRazonSocial()), normal));
-        pdf.add(new Paragraph("RUT: " + val(doc.getRutEmisor(), emisor.getRutEmpresa()), normal));
-        pdf.add(new Paragraph("Giro: " + val(doc.getGiroEmisor(), emisor.getGiro()), normal));
-        pdf.add(new Paragraph("Direccion: " + val(doc.getDireccionEmisor(), emisor.getDireccion()), normal));
-        pdf.add(new Paragraph(" ", normal));
+        PdfPTable encabezado = new PdfPTable(new float[]{1.7f, 1f});
+        encabezado.setWidthPercentage(100);
+        PdfPCell datosEmisor = new PdfPCell();
+        datosEmisor.setBorder(PdfPCell.NO_BORDER);
+        datosEmisor.setPaddingRight(16);
+        datosEmisor.addElement(new Paragraph(
+                val(doc.getNombreFantasiaEmisor(),
+                        val(doc.getRazonSocialEmisor(), emisor.getRazonSocial())), h1));
+        datosEmisor.addElement(new Paragraph(val(doc.getGiroEmisor(), emisor.getGiro()), normal));
+        datosEmisor.addElement(new Paragraph(
+                val(doc.getDireccionEmisor(), emisor.getDireccion()) + ", "
+                        + val(doc.getComunaEmisor(), emisor.getComuna()) + ", "
+                        + val(doc.getCiudadEmisor(), emisor.getCiudad()), normal));
+        datosEmisor.addElement(new Paragraph(
+                "TELÉFONO: " + val(doc.getTelefonoEmisor(), emisor.getTelefono()), normal));
+        datosEmisor.addElement(new Paragraph(
+                "CORREO: " + val(doc.getEmailPrincipalEmisor(), emisor.getEmailPrincipal()), normal));
+        datosEmisor.addElement(new Paragraph("WEB: " + val(emisor.getSitioWeb(), ""), normal));
+        encabezado.addCell(datosEmisor);
 
-        pdf.add(new Paragraph("RECEPTOR", label));
-        pdf.add(new Paragraph(val(doc.getRazonSocial(), receptor != null ? receptor.getRazonSocial() : ""), normal));
-        pdf.add(new Paragraph("RUT: " + val(doc.getRut(), receptor != null ? receptor.getRut() : ""), normal));
-        pdf.add(new Paragraph("Direccion: " + val(doc.getDireccion(), receptor != null ? receptor.getDireccion() : ""), normal));
-        pdf.add(new Paragraph("Fecha emision: " + str(doc.getFechaEmision())
-                + "    Vencimiento: " + str(doc.getFechaVencimiento()), normal));
-        pdf.add(new Paragraph("Moneda: " + (doc.getMoneda() != null ? doc.getMoneda().name() : "CLP"), normal));
-        pdf.add(new Paragraph(" ", normal));
+        PdfPCell sii = new PdfPCell();
+        sii.setBorderColor(rojoSii);
+        sii.setBorderWidth(2);
+        sii.setPadding(8);
+        sii.addElement(centrado("R.U.T.: " + val(doc.getRutEmisor(), emisor.getRutEmpresa()), siiFont));
+        sii.addElement(centrado(titulo.toUpperCase(), siiFont));
+        sii.addElement(centrado("N° " + folio, folioFont));
+        encabezado.addCell(sii);
+        pdf.add(encabezado);
 
-        PdfPTable table = new PdfPTable(new float[]{0.8f, 5f, 1.5f, 2f, 2f});
+        Paragraph oficina = new Paragraph("S.I.I. - DOCUMENTO TRIBUTARIO ELECTRÓNICO", label);
+        oficina.setAlignment(Element.ALIGN_RIGHT);
+        oficina.setSpacingBefore(3);
+        oficina.setSpacingAfter(8);
+        pdf.add(oficina);
+
+        PdfPTable ficha = new PdfPTable(new float[]{1f, 2.3f, 1f, 1.35f});
+        ficha.setWidthPercentage(100);
+        ficha.setSpacingAfter(8);
+        infoCell(ficha, "SEÑORES", label, gris, borde);
+        infoCell(ficha, val(doc.getRazonSocial(),
+                receptor != null ? receptor.getRazonSocial() : ""), normal, Color.WHITE, borde);
+        infoCell(ficha, "R.U.T.", label, gris, borde);
+        infoCell(ficha, val(doc.getRut(), receptor != null ? receptor.getRut() : ""),
+                normal, Color.WHITE, borde);
+        infoCell(ficha, "GIRO", label, gris, borde);
+        infoCell(ficha, val(doc.getGiro(), receptor != null ? receptor.getGiro() : ""),
+                normal, Color.WHITE, borde);
+        infoCell(ficha, "FECHA EMISIÓN", label, gris, borde);
+        infoCell(ficha, fecha(doc.getFechaEmision()), normal, Color.WHITE, borde);
+        infoCell(ficha, "DIRECCIÓN", label, gris, borde);
+        infoCell(ficha, val(doc.getDireccion(), receptor != null ? receptor.getDireccion() : ""),
+                normal, Color.WHITE, borde);
+        infoCell(ficha, "VENCIMIENTO", label, gris, borde);
+        infoCell(ficha, fecha(doc.getFechaVencimiento()), normal, Color.WHITE, borde);
+        infoCell(ficha, "COMUNA / CIUDAD", label, gris, borde);
+        infoCell(ficha,
+                val(doc.getComuna(), receptor != null ? receptor.getComuna() : "") + " / "
+                        + val(doc.getCiudad(), receptor != null ? receptor.getCiudad() : ""),
+                normal, Color.WHITE, borde);
+        infoCell(ficha, "MONEDA", label, gris, borde);
+        infoCell(ficha, doc.getMoneda() != null ? doc.getMoneda().name() : "CLP",
+                normal, Color.WHITE, borde);
+        pdf.add(ficha);
+
+        PdfPTable table = new PdfPTable(new float[]{1.15f, 4.8f, 1f, 0.8f, 1.35f, 1.35f});
         table.setWidthPercentage(100);
-        headerCell(table, "#", label);
-        headerCell(table, "Descripcion", label);
-        headerCell(table, "Cant.", label);
-        headerCell(table, "P. Unit.", label);
-        headerCell(table, "Subtotal", label);
+        table.setHeaderRows(1);
+        table.setSpacingAfter(7);
+        headerCell(table, "CÓDIGO", label, gris, borde);
+        headerCell(table, "DESCRIPCIÓN", label, gris, borde);
+        headerCell(table, "CANTIDAD", label, gris, borde);
+        headerCell(table, "UNM", label, gris, borde);
+        headerCell(table, "PRC. UNITARIO", label, gris, borde);
+        headerCell(table, "TOTAL", label, gris, borde);
 
         List<DetalleDocumentoEntity> detalles = doc.getDetalles() != null ? doc.getDetalles() : List.of();
-        int nro = 1;
         for (DetalleDocumentoEntity d : detalles) {
-            cell(table, String.valueOf(nro++), normal, Element.ALIGN_CENTER);
-            cell(table, val(d.getDescripcionItem(), ""), normal, Element.ALIGN_LEFT);
-            cell(table, str(d.getCantidad()), normal, Element.ALIGN_RIGHT);
-            cell(table, str(d.getPrecioUnitario()), normal, Element.ALIGN_RIGHT);
-            cell(table, str(d.getSubtotal()), normal, Element.ALIGN_RIGHT);
+            String codigo = d.getProducto() != null ? val(d.getProducto().getCodigo(), "") : "";
+            cell(table, codigo, normal, Element.ALIGN_CENTER, borde);
+            cell(table, val(d.getDescripcionItem(), ""), normal, Element.ALIGN_LEFT, borde);
+            cell(table, numero(d.getCantidad()), normal, Element.ALIGN_RIGHT, borde);
+            cell(table, val(d.getUnidadMedida(), "UNI"), normal, Element.ALIGN_CENTER, borde);
+            cell(table, monto(d.getPrecioUnitario()), normal, Element.ALIGN_RIGHT, borde);
+            cell(table, monto(d.getSubtotal()), normal, Element.ALIGN_RIGHT, borde);
         }
         pdf.add(table);
-        pdf.add(new Paragraph(" ", normal));
-
-        pdf.add(alineadoDerecha("Neto: " + str(doc.getMontoNeto()), normal));
-        pdf.add(alineadoDerecha("IVA: " + str(doc.getMontoIva()), normal));
-        pdf.add(alineadoDerecha("TOTAL: " + str(doc.getMontoTotal()), label));
 
         if (doc.getObservaciones() != null && !doc.getObservaciones().isBlank()) {
-            pdf.add(new Paragraph(" ", normal));
             pdf.add(new Paragraph("Observaciones:", label));
-            pdf.add(new Paragraph(doc.getObservaciones(), normal));
+            Paragraph observaciones = new Paragraph(doc.getObservaciones(), normal);
+            observaciones.setSpacingAfter(6);
+            pdf.add(observaciones);
         }
+
+        List<ReferenciaDocumentoEntity> referencias =
+                doc.getReferencias() != null ? doc.getReferencias() : List.of();
+        if (!referencias.isEmpty()) {
+            pdf.add(new Paragraph("Referencias a otros documentos", label));
+            PdfPTable refs = new PdfPTable(new float[]{2f, 1f, 1.2f, 2.5f});
+            refs.setWidthPercentage(100);
+            refs.setSpacingBefore(3);
+            refs.setSpacingAfter(7);
+            headerCell(refs, "TIPO DOCUMENTO", label, gris, borde);
+            headerCell(refs, "FOLIO", label, gris, borde);
+            headerCell(refs, "FECHA", label, gris, borde);
+            headerCell(refs, "RAZÓN REFERENCIA", label, gris, borde);
+            for (ReferenciaDocumentoEntity referencia : referencias) {
+                DocumentoTributarioEntity referido = referencia.getDocumentoReferenciado();
+                cell(refs,
+                        referido != null && referido.getTipoDocumento() != null
+                                ? referido.getTipoDocumento().getDescripcion()
+                                : val(referencia.getTipoReferencia(), ""),
+                        normal, Element.ALIGN_LEFT, borde);
+                cell(refs, referido != null && referido.getFolio() != null
+                                ? String.valueOf(referido.getFolio()) : "",
+                        normal, Element.ALIGN_CENTER, borde);
+                cell(refs, referido != null ? fecha(referido.getFechaEmision()) : "",
+                        normal, Element.ALIGN_CENTER, borde);
+                cell(refs, val(referencia.getMotivo(), ""), normal, Element.ALIGN_LEFT, borde);
+            }
+            pdf.add(refs);
+        }
+
+        PdfPTable pie = new PdfPTable(new float[]{1.65f, 1f});
+        pie.setWidthPercentage(100);
+        PdfPCell timbre = new PdfPCell();
+        timbre.setBorderColor(borde);
+        timbre.setPadding(8);
+        timbre.addElement(centrado("TIMBRE ELECTRÓNICO S.I.I.", label));
+        timbre.addElement(centrado(
+                "Documento tributario electrónico\nVerifique documento: www.sii.cl\n\n"
+                        + "FECHA RECEPCIÓN: ____________________\n"
+                        + "NOMBRE: _____________________________\n"
+                        + "RUT: __________________  FIRMA: __________________", normal));
+        pie.addCell(timbre);
+
+        PdfPTable totales = new PdfPTable(new float[]{1.2f, 1f});
+        totales.setWidthPercentage(100);
+        totalRow(totales, "SUBTOTAL", doc.getMontoNeto(), normal, borde);
+        totalRow(totales, "NETO", doc.getMontoNeto(), normal, borde);
+        totalRow(totales, "IVA", doc.getMontoIva(), normal, borde);
+        BigDecimal exento = doc.getMontoIva() == null || doc.getMontoIva().compareTo(BigDecimal.ZERO) == 0
+                ? doc.getMontoTotal() : BigDecimal.ZERO;
+        totalRow(totales, "EXENTO", exento, normal, borde);
+        totalRow(totales, "TOTAL", doc.getMontoTotal(), label, borde);
+        PdfPCell totalCell = new PdfPCell(totales);
+        totalCell.setBorder(PdfPCell.NO_BORDER);
+        totalCell.setPaddingLeft(8);
+        pie.addCell(totalCell);
+        pdf.add(pie);
+
+        Paragraph son = new Paragraph(
+                "SON: " + montoEnPalabras(doc.getMontoTotal()) + " "
+                        + (doc.getMoneda() != null ? doc.getMoneda().name() : "CLP"),
+                label);
+        son.setSpacingBefore(5);
+        pdf.add(son);
 
         pdf.close();
         return out.toByteArray();
@@ -226,11 +352,115 @@ public class DocumentoExportService {
         table.addCell(cell);
     }
 
+    private void headerCell(PdfPTable table, String text, Font font, Color background, Color border) {
+        PdfPCell cell = new PdfPCell(new Phrase(text, font));
+        cell.setHorizontalAlignment(Element.ALIGN_CENTER);
+        cell.setVerticalAlignment(Element.ALIGN_MIDDLE);
+        cell.setBackgroundColor(background);
+        cell.setBorderColor(border);
+        cell.setPadding(4);
+        table.addCell(cell);
+    }
+
     private void cell(PdfPTable table, String text, Font font, int align) {
         PdfPCell cell = new PdfPCell(new Phrase(text, font));
         cell.setHorizontalAlignment(align);
         cell.setPadding(4);
         table.addCell(cell);
+    }
+
+    private void cell(PdfPTable table, String text, Font font, int align, Color border) {
+        PdfPCell cell = new PdfPCell(new Phrase(text != null ? text : "", font));
+        cell.setHorizontalAlignment(align);
+        cell.setVerticalAlignment(Element.ALIGN_MIDDLE);
+        cell.setBorderColor(border);
+        cell.setPadding(4);
+        table.addCell(cell);
+    }
+
+    private void infoCell(PdfPTable table, String text, Font font, Color background, Color border) {
+        PdfPCell cell = new PdfPCell(new Phrase(text != null ? text : "", font));
+        cell.setBackgroundColor(background);
+        cell.setBorderColor(border);
+        cell.setPadding(4);
+        table.addCell(cell);
+    }
+
+    private void totalRow(PdfPTable table, String labelText, BigDecimal value, Font font, Color border) {
+        cell(table, labelText, font, Element.ALIGN_RIGHT, border);
+        cell(table, "$ " + monto(value), font, Element.ALIGN_RIGHT, border);
+    }
+
+    private Paragraph centrado(String text, Font font) {
+        Paragraph paragraph = new Paragraph(text != null ? text : "", font);
+        paragraph.setAlignment(Element.ALIGN_CENTER);
+        return paragraph;
+    }
+
+    private String fecha(LocalDate value) {
+        return value != null ? value.format(DateTimeFormatter.ofPattern("dd-MM-yyyy")) : "";
+    }
+
+    private String numero(BigDecimal value) {
+        if (value == null) return "";
+        return value.stripTrailingZeros().toPlainString();
+    }
+
+    private String monto(BigDecimal value) {
+        if (value == null) return "0";
+        NumberFormat format = NumberFormat.getNumberInstance(new Locale("es", "CL"));
+        format.setMinimumFractionDigits(0);
+        format.setMaximumFractionDigits(2);
+        return format.format(value);
+    }
+
+    private String montoEnPalabras(BigDecimal value) {
+        if (value == null) return "CERO";
+        long numero = value.setScale(0, java.math.RoundingMode.HALF_UP).longValue();
+        return numeroEnPalabras(numero).toUpperCase();
+    }
+
+    private String numeroEnPalabras(long numero) {
+        if (numero == 0) return "cero";
+        if (numero < 0) return "menos " + numeroEnPalabras(-numero);
+        if (numero >= 1_000_000_000) {
+            long milesMillones = numero / 1_000_000_000;
+            return numeroEnPalabras(milesMillones) + " mil millones"
+                    + resto(numero % 1_000_000_000);
+        }
+        if (numero >= 1_000_000) {
+            long millones = numero / 1_000_000;
+            String prefijo = millones == 1 ? "un millón" : numeroEnPalabras(millones) + " millones";
+            return prefijo + resto(numero % 1_000_000);
+        }
+        if (numero >= 1_000) {
+            long miles = numero / 1_000;
+            String prefijo = miles == 1 ? "mil" : numeroEnPalabras(miles) + " mil";
+            return prefijo + resto(numero % 1_000);
+        }
+        if (numero >= 100) {
+            if (numero == 100) return "cien";
+            String[] centenas = {"", "ciento", "doscientos", "trescientos", "cuatrocientos",
+                    "quinientos", "seiscientos", "setecientos", "ochocientos", "novecientos"};
+            return centenas[(int) numero / 100] + resto(numero % 100);
+        }
+        if (numero < 30) {
+            String[] menores = {"cero", "uno", "dos", "tres", "cuatro", "cinco", "seis",
+                    "siete", "ocho", "nueve", "diez", "once", "doce", "trece", "catorce",
+                    "quince", "dieciséis", "diecisiete", "dieciocho", "diecinueve",
+                    "veinte", "veintiuno", "veintidós", "veintitrés", "veinticuatro",
+                    "veinticinco", "veintiséis", "veintisiete", "veintiocho", "veintinueve"};
+            return menores[(int) numero];
+        }
+        String[] decenas = {"", "", "", "treinta", "cuarenta", "cincuenta", "sesenta",
+                "setenta", "ochenta", "noventa"};
+        long unidad = numero % 10;
+        return decenas[(int) numero / 10]
+                + (unidad > 0 ? " y " + numeroEnPalabras(unidad) : "");
+    }
+
+    private String resto(long numero) {
+        return numero > 0 ? " " + numeroEnPalabras(numero) : "";
     }
 
     private Paragraph alineadoDerecha(String text, Font font) {

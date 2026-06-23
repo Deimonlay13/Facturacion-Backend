@@ -19,7 +19,8 @@ Cuando aparezca `Started FacturacionBackendApplication`:
 | http://localhost:8080 | **Swagger** (endpoints + pruebas, modo oscuro) |
 | http://localhost:8080/admin | **Panel de administración** (login) |
 
-**Acceso al panel:** solo `ROLE_SUPER_ADMIN`. Usuario sembrado por defecto: **`root` / `1234`**.
+**Acceso al panel:** solo `ROLE_SUPER_ADMIN`. Este rol es global y no se asocia a
+ninguna empresa. Usuario sembrado por defecto: **`root` / `1234`**.
 
 ### Empaquetar / correr el .jar
 ```bash
