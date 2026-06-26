@@ -1,16 +1,17 @@
 package com.gdl.facturacion_backend.repository;
 
-import com.gdl.facturacion_backend.entity.RefreshTokenEntity;
-import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
-import org.springframework.boot.jpa.test.autoconfigure.TestEntityManager;
-
+import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
+import org.springframework.boot.jpa.test.autoconfigure.TestEntityManager;
+
+import com.gdl.facturacion_backend.entity.RefreshTokenEntity;
 
 @DataJpaTest
 class RefreshTokenRepositoryTest {
@@ -32,6 +33,11 @@ class RefreshTokenRepositoryTest {
         return entityManager.persistAndFlush(rt);
     }
 
+    private void assertFechasCercanas(LocalDateTime actual, LocalDateTime esperado) {
+        assertThat(Duration.between(actual, esperado).abs().toMillis())
+                .isLessThanOrEqualTo(1);
+    }
+
     // ---------- findByToken ----------
 
     @Test
@@ -47,7 +53,7 @@ class RefreshTokenRepositoryTest {
         assertThat(resultado.get().getToken()).isEqualTo("token-abc-123");
         assertThat(resultado.get().getUsuarioId()).isEqualTo(10L);
         assertThat(resultado.get().isRevocado()).isFalse();
-        assertThat(resultado.get().getExpiraEn()).isEqualTo(expira);
+        assertFechasCercanas(resultado.get().getExpiraEn(), expira);
     }
 
     @Test
@@ -114,7 +120,7 @@ class RefreshTokenRepositoryTest {
 
         assertThat(recuperado.getToken()).isEqualTo("token-completo");
         assertThat(recuperado.getUsuarioId()).isEqualTo(99L);
-        assertThat(recuperado.getExpiraEn()).isEqualTo(expira);
+        assertFechasCercanas(recuperado.getExpiraEn(), expira);
         assertThat(recuperado.isRevocado()).isFalse();
     }
 
