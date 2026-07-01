@@ -1,0 +1,722 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Facturacion DTE - Administración</title>
+<style>
+  :root {
+    --bg: #0f161e; --panel: #18222e; --panel2: #1c2733; --border: #26333f;
+    --text: #dfe7ef; --muted: #8499ab; --accent: #5b9bd5; --link: #7fb2d8; --caption: #234458;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: "Inter", "Segoe UI", Roboto, Arial, sans-serif; background: var(--bg); color: var(--text); font-size: 14px; -webkit-font-smoothing: antialiased; }
+  a { color: var(--link); text-decoration: none; cursor: pointer; }
+  a:hover { color: #a9d0ec; }
+
+  header { background: #131c25; border-bottom: 1px solid var(--border); padding: 14px 26px; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 5; }
+  header h1 { margin: 0; font-size: 18px; font-weight: 600; color: #fff; letter-spacing: .3px; }
+  header .right { font-size: 12px; color: var(--muted); }
+  header .right a { color: #f3c969; margin-left: 12px; }
+
+  .layout { display: flex; min-height: calc(100vh - 53px); }
+  .sidebar { width: 240px; background: #131c25; border-right: 1px solid var(--border); padding: 12px 0; flex-shrink: 0; }
+  .sidebar a { display: block; color: #aab8c6; padding: 9px 22px; border-left: 3px solid transparent; }
+  .sidebar a:hover { background: #1d2a38; color: #fff; }
+  .sidebar a.active { background: #1d2a38; color: #fff; border-left-color: var(--accent); font-weight: 600; }
+  .sidebar .grp { color: #5e7488; font-size: 10.5px; text-transform: uppercase; letter-spacing: .08em; padding: 16px 22px 6px; }
+
+  .content { flex: 1; padding: 26px 32px; max-width: 1160px; }
+  h2 { font-weight: 500; color: #fff; margin: 2px 0 20px; font-size: 21px; }
+
+  .module { background: var(--panel); border: 1px solid var(--border); border-radius: 10px; margin-bottom: 20px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,.35); }
+  .module .caption { background: var(--caption); color: #cfe6f6; padding: 10px 16px; font-weight: 600; text-transform: uppercase; font-size: 11.5px; letter-spacing: .05em; display: block; }
+  table { width: 100%; border-collapse: collapse; }
+  .module th { background: var(--panel2); color: var(--muted); padding: 9px 16px; text-align: left; font-size: 11px; text-transform: uppercase; letter-spacing: .04em; border-bottom: 1px solid var(--border); }
+  .module td { padding: 11px 16px; border-bottom: 1px solid #202c39; }
+  .module tr:last-child td { border-bottom: none; }
+  .module tbody tr:hover td, .module tr:hover td { background: #1d2a38; }
+
+  .rowact a { margin-right: 12px; }
+  .btn { display: inline-block; background: #2a6f97; color: #fff !important; padding: 8px 16px; border: none; border-radius: 6px; cursor: pointer; font-size: 13px; font-weight: 500; }
+  .btn:hover { background: #3a83af; }
+  .btn.muted { background: #39495a; }
+  .toolbar { margin: 4px 0 14px; display: flex; justify-content: space-between; align-items: center; }
+  .crumbs { color: #6e8194; font-size: 12px; margin-bottom: 12px; }
+  .crumbs a { color: var(--link); }
+
+  input, select { background: #0e1620; color: var(--text); padding: 9px 11px; border: 1px solid #2c3a4a; border-radius: 6px; width: 100%; max-width: 440px; font-size: 14px; }
+  input:focus, select:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 2px rgba(91,155,213,.2); }
+  .field { margin-bottom: 14px; }
+  .field label { display: block; font-weight: 600; margin-bottom: 5px; font-size: 12px; color: var(--muted); }
+
+  .login { max-width: 380px; margin: 80px auto; background: var(--panel); border: 1px solid var(--border); border-radius: 12px; padding: 30px; box-shadow: 0 8px 30px rgba(0,0,0,.45); }
+  .login h2 { margin-top: 0; }
+  .err { color: #f08a8a; margin: 8px 0; min-height: 16px; }
+  .pill { padding: 3px 10px; border-radius: 20px; font-size: 11px; font-weight: 600; }
+  .pill.t { background: rgba(46,125,50,.22); color: #74cf7e; }
+  .pill.f { background: rgba(186,33,33,.22); color: #f08a8a; }
+  .small { font-size: 12px; color: var(--muted); }
+  .modal-ov { position: fixed; inset: 0; background: rgba(0,0,0,.6); display: flex; align-items: center; justify-content: center; z-index: 1000; }
+  .modal-box { background: var(--panel); border: 1px solid var(--border); border-radius: 10px; padding: 24px; max-width: 400px; box-shadow: 0 12px 48px rgba(0,0,0,.55); }
+  .form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 24px; }
+  .form-grid input, .form-grid select { max-width: none; width: 100%; }
+  @media (max-width: 760px) { .form-grid { grid-template-columns: 1fr; } }
+  #toasts { position: fixed; top: 66px; right: 20px; z-index: 1100; display: flex; flex-direction: column; gap: 10px; }
+  .toast { padding: 12px 16px; border-radius: 8px; color: #fff; font-size: 14px; box-shadow: 0 6px 22px rgba(0,0,0,.45); transition: opacity .3s; max-width: 340px; }
+  .toast-ok { background: #2e7d32; }
+  .toast-err { background: #ba2121; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Facturacion DTE</h1>
+  <div class="right" id="userbar"></div>
+</header>
+<main id="app"></main>
+
+<script>
+const API = location.origin;
+const REQUIRED_ROLE = "ROLE_SUPER_ADMIN";
+let TOKEN   = localStorage.getItem("pm_token")   || "";
+let USER    = localStorage.getItem("pm_user")    || "";
+let ROLE    = localStorage.getItem("pm_role")    || "";
+let REFRESH = localStorage.getItem("pm_refresh") || "";
+
+// Intenta renovar el access token usando el refresh token. Devuelve true si lo logró.
+async function tryRefresh(){
+  if (!REFRESH) return false;
+  try {
+    const res = await fetch(API + "/auth/refresh", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ refreshToken: REFRESH })
+    });
+    if (!res.ok) return false;
+    const data = await res.json();
+    if (data && data.token){
+      TOKEN = data.token; localStorage.setItem("pm_token", TOKEN);
+      if (data.refreshToken){ REFRESH = data.refreshToken; localStorage.setItem("pm_refresh", REFRESH); }
+      return true;
+    }
+  } catch(e){}
+  return false;
+}
+
+function jwtPayload(t){
+  try {
+    const payload = t.split(".")[1].replace(/-/g,"+").replace(/_/g,"/");
+    return JSON.parse(decodeURIComponent(escape(atob(payload))));
+  } catch(e){ return null; }
+}
+function roleFromToken(t){ const p = jwtPayload(t); return p ? (p.rol || null) : null; }
+function tokenVigente(t){ const p = jwtPayload(t); return !!(p && p.exp && p.exp*1000 > Date.now()); }
+
+const GROUPS = ["Gestión", "Clientes y Productos", "Facturación", "Sistema"];
+const MODELS = {
+  empresas: { label:"Empresas", group:"Gestión", list:"/empresas",
+    cols:["id","rutEmpresa","razonSocial","nombreFantasia","activo"],
+    create:"/empresas", update:id=>`/empresas/${id}`, estado:id=>`/empresas/${id}/estado`, estadoMode:"query",
+    fields:["rutEmpresa","razonSocial","nombreFantasia","giro","direccion","ciudad","comuna","pais","telefono","sitioWeb","emailPrincipal","emailContabilidad","rutRepresentante","nombreRepresentante","telefonoRepresentante"] },
+  usuarios: { label:"Usuarios", group:"Gestión", list:"/usuarios",
+    cols:["id","username","rol","activo"],
+    create:"/usuarios", update:id=>`/usuarios/${id}`, estado:id=>`/usuarios/${id}/estado`, estadoMode:"body",
+    rol:id=>`/usuarios/${id}/rol`, del:id=>`/usuarios/${id}`,
+    fields:["username","password","rol"], editFields:["username","password"],
+    selects:{ rol:"/roles" } },
+  roles: { label:"Roles", group:"Gestión", list:"/roles",
+    cols:["id","nombre","nombreMostrar","activo"],
+    create:"/roles", del:id=>`/roles/${id}`, fields:["nombre","nombreMostrar","descripcion"] },
+  clientes: { label:"Clientes", group:"Clientes y Productos", list:"/clientes",
+    cols:["id","rut","razonSocial","email","activo"],
+    create:"/clientes", update:id=>`/clientes/${id}`, del:id=>`/clientes/${id}`,
+    fields:["rut","razonSocial","email","nombreFantasia","giro","direccion","ciudad","comuna","region","pais","telefono"] },
+  productos: { label:"Productos", group:"Clientes y Productos", list:"/productos",
+    cols:["id","codigo","nombre","precio","afectaIva","activo"],
+    create:"/productos", update:id=>`/productos/${id}`, del:id=>`/productos/${id}`,
+    fields:["codigo","nombre","descripcion","unidadMedida","precio","afectaIva","activo"],
+    types:{ precio:"number", afectaIva:"bool", activo:"bool" } },
+  documentos: { label:"Documentos", group:"Facturación", list:"/api/documentos",
+    cols:["id","codigoTipoDocumento","clienteRazonSocial","folio","estado","moneda","montoTotal"],
+    detail:id=>`/api/documentos/${id}`, readOnly:true },
+  tipos: { label:"Tipos de Documento", group:"Facturación", list:"/api/tipos-documento",
+    cols:["id","codigoSii","descripcion"], readOnly:true },
+  cafs: { label:"CAF", group:"Facturación", list:"/api/folios/caf", readOnly:true },
+  control: { label:"Control de Folios", group:"Facturación", list:"/api/folios/control", readOnly:true },
+  folios: { label:"Folios", group:"Facturación", list:"/api/folios",
+    cols:["id","numero","tipo","estado"], readOnly:true, paged:true },
+  auditoria: { label:"Auditoría", group:"Sistema", list:"/auditoria",
+    cols:["id","fecha","usuarioId","tabla","accion","detalle"], readOnly:true,
+    format:{ tabla:"humanize", accion:"humanize" } },
+};
+
+// ---------------------------------------------------------------- HTTP
+async function api(method, path, body) {
+  const doFetch = () => {
+    const opt = { method, headers: {} };
+    if (TOKEN) opt.headers["Authorization"] = "Bearer " + TOKEN;
+    if (body !== undefined) { opt.headers["Content-Type"] = "application/json"; opt.body = JSON.stringify(body); }
+    return fetch(API + path, opt);
+  };
+  let res = await doFetch();
+  // Si el access token expiró, intenta renovarlo con el refresh token y reintenta una vez
+  if ((res.status === 401 || res.status === 403) && TOKEN && await tryRefresh()) {
+    res = await doFetch();
+  }
+  const text = await res.text();
+  let data = null; try { data = text ? JSON.parse(text) : null; } catch(e) { data = text; }
+  if (!res.ok) {
+    if ((res.status === 401 || res.status === 403) && TOKEN) { logout(); throw new Error("Sesión expirada. Inicia sesión de nuevo."); }
+    const msg = (data && (data.mensaje || data.error)) || ("HTTP " + res.status);
+    throw new Error(msg);
+  }
+  return data;
+}
+
+// Subida de archivo (multipart) — no fija Content-Type para que el navegador ponga el boundary
+async function apiUpload(path, file, fieldName = "archivo"){
+  const doFetch = () => {
+    const fd = new FormData(); fd.append(fieldName, file);
+    return fetch(API + path, { method:"POST", headers: TOKEN?{Authorization:"Bearer "+TOKEN}:{}, body: fd });
+  };
+  let res = await doFetch();
+  if ((res.status === 401 || res.status === 403) && TOKEN && await tryRefresh()) res = await doFetch();
+  const text = await res.text();
+  let data = null; try { data = text ? JSON.parse(text) : null; } catch(e) { data = text; }
+  if (!res.ok) {
+    if ((res.status === 401 || res.status === 403) && TOKEN) { logout(); throw new Error("Sesión expirada. Inicia sesión de nuevo."); }
+    throw new Error((data && (data.mensaje || data.error)) || ("HTTP " + res.status));
+  }
+  return data;
+}
+
+// ---------------------------------------------------------------- helpers
+const el = sel => document.querySelector(sel);
+// Notificación temporal (toast) — reemplaza los alert() del navegador
+function toast(msg, tipo){
+  let cont = el("#toasts");
+  if (!cont){ cont = document.createElement("div"); cont.id = "toasts"; document.body.appendChild(cont); }
+  const t = document.createElement("div");
+  t.className = "toast " + (tipo === "err" ? "toast-err" : "toast-ok");
+  t.textContent = msg;
+  cont.appendChild(t);
+  setTimeout(() => { t.style.opacity = "0"; setTimeout(() => t.remove(), 300); }, 3000);
+}
+function esc(v){ return String(v==null?"":v).replace(/[&<>"]/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;"}[c])); }
+// Formatea fechas ISO (2026-06-20T21:16:01.581) a "2026-06-20 21:16:01"
+function fmtFecha(v){
+  if (typeof v === "string" && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/.test(v)){
+    const d = new Date(v);
+    if (!isNaN(d.getTime())){
+      const p = n => String(n).padStart(2,"0");
+      return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`;
+    }
+  }
+  return null;
+}
+// camelCase / PascalCase / snake_case -> texto legible ("agregarDetalle" -> "Agregar detalle")
+function humanize(s){
+  if (s==null) return "";
+  return String(s).replace(/([a-z0-9])([A-Z])/g,"$1 $2").replace(/_/g," ").toLowerCase().replace(/^./,c=>c.toUpperCase());
+}
+function cell(v){
+  if (v===true)  return '<span class="pill t">Sí</span>';
+  if (v===false) return '<span class="pill f">No</span>';
+  const f = fmtFecha(v); if (f) return esc(f);
+  if (v && typeof v === "object") return esc(JSON.stringify(v));
+  return esc(v);
+}
+function userbar(){
+  el("#userbar").innerHTML = TOKEN
+    ? `Hola, <b>${esc(USER)}</b> <span class="small">(${esc(ROLE)})</span> <a onclick="logout()">Cerrar sesión</a>`
+    : "";
+}
+// Pinta el cascarón con barra lateral + contenido
+function shell(activeKey, contentHtml){
+  let side = `<a class="${activeKey===null?'active':''}" onclick="showIndex()">Inicio</a>`;
+  for (const g of GROUPS){
+    const keys = Object.keys(MODELS).filter(k => MODELS[k].group === g);
+    if (!keys.length) continue;
+    side += `<div class="grp">${esc(g)}</div>`;
+    for (const k of keys){
+      side += `<a class="${activeKey===k?'active':''}" onclick="showList('${k}')">${esc(MODELS[k].label)}</a>`;
+    }
+  }
+  side += `<div class="grp">Acciones</div><a class="${activeKey==='__import'?'active':''}" onclick="showImportTxt()">Importar TXT</a>`;
+  el("#app").innerHTML = `<div class="layout"><nav class="sidebar">${side}</nav><section class="content">${contentHtml}</section></div>`;
+}
+
+// ---------------------------------------------------------------- vistas
+function showLogin(){
+  userbar();
+  el("#app").innerHTML = `
+    <div class="login">
+      <h2>Iniciar sesión</h2>
+      <div class="field"><label>Usuario</label><input id="u" autofocus></div>
+      <div class="field"><label>Contraseña</label><input id="p" type="password"></div>
+      <div class="err" id="loginErr"></div>
+      <button class="btn" onclick="doLogin()">Entrar</button>
+    </div>`;
+  el("#p").addEventListener("keydown", e => { if (e.key==="Enter") doLogin(); });
+}
+async function doLogin(){
+  try {
+    const u = el("#u").value.trim(), p = el("#p").value;
+    const r = await api("POST", "/auth/login", { username:u, password:p });
+    const rol = roleFromToken(r.token);
+    if (rol !== REQUIRED_ROLE){
+      el("#loginErr").textContent = "Acceso denegado: solo usuarios SUPER_ADMIN pueden entrar al panel.";
+      return;
+    }
+    TOKEN = r.token; USER = u; ROLE = rol; REFRESH = r.refreshToken || "";
+    localStorage.setItem("pm_token", TOKEN); localStorage.setItem("pm_user", USER); localStorage.setItem("pm_role", ROLE);
+    if (REFRESH) localStorage.setItem("pm_refresh", REFRESH);
+    showIndex();
+  } catch(e){ el("#loginErr").textContent = e.message; }
+}
+function logout(){
+  if (REFRESH){ try { fetch(API + "/auth/logout", { method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({ refreshToken: REFRESH }) }); } catch(e){} }
+  TOKEN=""; USER=""; ROLE=""; REFRESH="";
+  localStorage.removeItem("pm_token"); localStorage.removeItem("pm_user"); localStorage.removeItem("pm_role"); localStorage.removeItem("pm_refresh");
+  showLogin();
+}
+
+function showIndex(){
+  if (!TOKEN || ROLE !== REQUIRED_ROLE) return showLogin();
+  userbar();
+  let html = `<h2>Bienvenido al Panel de Administración</h2>`;
+  for (const g of GROUPS){
+    const keys = Object.keys(MODELS).filter(k => MODELS[k].group === g);
+    if (!keys.length) continue;
+    html += `<div class="module"><span class="caption">${esc(g)}</span><table>`;
+    for (const k of keys){
+      const m = MODELS[k];
+      let add;
+      if (m.create) add = `<a onclick="showForm('${k}')">+ Agregar</a>`;
+      else if (k === "documentos") add = `<a onclick="showNuevoDoc()">+ Nuevo</a>`;
+      else add = `<a onclick="showList('${k}')">Ver</a>`;
+      html += `<tr><td><a onclick="showList('${k}')"><b>${esc(m.label)}</b></a></td>
+               <td style="text-align:right">${add}</td></tr>`;
+    }
+    html += `</table></div>`;
+  }
+  shell(null, html);
+}
+
+let LIST = { key:null, rows:[], filter:"", page:0, perPage:15 };
+
+async function showList(key){
+  if (!TOKEN || ROLE !== REQUIRED_ROLE) return showLogin();
+  const m = MODELS[key];
+  userbar();
+  let filtrosHtml = "";
+  if (key === "documentos"){
+    let tipos = [], clientes = [];
+    try { tipos = await api("GET", "/api/tipos-documento") || []; } catch(e){}
+    try { clientes = await api("GET", "/clientes") || []; } catch(e){}
+    filtrosHtml = `<div class="module" style="padding:12px;margin-bottom:14px"><div style="display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end">
+      <div><label class="small">Tipo</label><br><select id="fTipo" style="max-width:210px"><option value="">Todos</option>${tipos.map(t=>`<option value="${t.codigoSii}">${esc(t.codigoSii+" - "+t.descripcion)}</option>`).join("")}</select></div>
+      <div><label class="small">Estado</label><br><select id="fEstado" style="max-width:150px"><option value="">Todos</option><option>BORRADOR</option><option>EMITIDO</option></select></div>
+      <div><label class="small">Cliente</label><br><select id="fCli" style="max-width:220px"><option value="">Todos</option>${clientes.map(c=>`<option value="${c.id}">${esc(c.razonSocial)}</option>`).join("")}</select></div>
+      <div><label class="small">Desde</label><br><input type="date" id="fDesde" style="max-width:160px"></div>
+      <div><label class="small">Hasta</label><br><input type="date" id="fHasta" style="max-width:160px"></div>
+      <button class="btn" onclick="aplicarFiltrosDoc()">Filtrar</button>
+      <button class="btn muted" onclick="showList('documentos')">Limpiar</button>
+    </div></div>`;
+  }
+  const acciones = `<button class="btn muted" onclick="exportCsv()">Exportar</button>`
+    + (m.create ? ` <button class="btn" onclick="showForm('${key}')">+ Agregar</button>` : "")
+    + (key === "documentos" ? ` <button class="btn" onclick="showNuevoDoc()">+ Nuevo</button> <button class="btn muted" onclick="showImportTxt()">Importar TXT</button>` : "");
+  const searchHtml = m.paged ? "" :
+    `<input id="listSearch" placeholder="Buscar…" style="max-width:200px" oninput="listFilter(this.value)">`;
+  shell(key, `<div class="crumbs"><a onclick="showIndex()">Inicio</a> › ${esc(m.label)}</div>
+    <div class="toolbar"><h2>${esc(m.label)}</h2>
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:nowrap">
+        ${searchHtml}${acciones}
+      </div>
+    </div>
+    ${filtrosHtml}
+    <div class="err" id="listErr"></div><div id="tbl">Cargando…</div>`);
+  try {
+    if (m.paged){ await loadPage(key, 0); return; }
+    const rows = await api("GET", m.list) || [];
+    LIST = { key, rows, filter:"", page:0, perPage:15 };
+    renderTabla();
+  } catch(e){ el("#listErr").textContent = e.message; el("#tbl").innerHTML=""; }
+}
+
+// Carga una página desde el servidor (modelos con paged:true)
+async function loadPage(key, page){
+  const m = MODELS[key];
+  const size = (LIST && LIST.perPage) || 15;
+  try {
+    const resp = await api("GET", m.list + "?page=" + page + "&size=" + size);
+    LIST = { key, rows: resp.content || [], filter: "", page: resp.number || 0, perPage: resp.size || size,
+             paged: true, totalPages: resp.totalPages || 1, total: resp.totalElements || 0 };
+    renderTabla();
+  } catch(e){ el("#listErr").textContent = e.message; el("#tbl").innerHTML = ""; }
+}
+
+async function aplicarFiltrosDoc(){
+  const q = new URLSearchParams();
+  const t=el("#fTipo").value, e=el("#fEstado").value, c=el("#fCli").value, d=el("#fDesde").value, h=el("#fHasta").value;
+  if (t) q.set("tipo", t);
+  if (e) q.set("estado", e);
+  if (c) q.set("clienteId", c);
+  if (d) q.set("desde", d);
+  if (h) q.set("hasta", h);
+  try {
+    const rows = await api("GET", "/api/documentos" + (q.toString() ? "?"+q.toString() : "")) || [];
+    LIST = { key:"documentos", rows, filter:"", page:0, perPage:15 };
+    renderTabla();
+  } catch(err){ el("#listErr").textContent = err.message; }
+}
+
+function exportCsv(){
+  const m = MODELS[LIST.key];
+  const cols = m.cols || (LIST.rows[0] ? Object.keys(LIST.rows[0]) : ["id"]);
+  let data = LIST.rows;
+  if (LIST.filter){
+    const f = LIST.filter.toLowerCase();
+    data = data.filter(r => cols.some(c => String(r[c] ?? "").toLowerCase().includes(f)));
+  }
+  const q = v => { v = v==null ? "" : String(v); return /[",\n]/.test(v) ? '"'+v.replace(/"/g,'""')+'"' : v; };
+  const csv = [cols.join(",")].concat(data.map(r => cols.map(c => q(r[c])).join(","))).join("\n");
+  const blob = new Blob(["﻿"+csv], { type:"text/csv;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a"); a.href = url; a.download = LIST.key + ".csv"; a.click();
+  URL.revokeObjectURL(url);
+}
+
+function listFilter(v){ LIST.filter = v; LIST.page = 0; renderTabla(); }
+function listPage(d){
+  if (LIST.paged){ const np = LIST.page + d; if (np >= 0 && np < LIST.totalPages) loadPage(LIST.key, np); }
+  else { LIST.page += d; renderTabla(); }
+}
+
+function renderTabla(){
+  const m = MODELS[LIST.key];
+  const cols = m.cols || (LIST.rows[0] ? Object.keys(LIST.rows[0]) : ["id"]);
+  const hasAct = m.update || m.del || m.estado || m.rol || m.detail;
+  let slice, total, pages;
+  if (LIST.paged){
+    slice = LIST.rows; total = LIST.total; pages = LIST.totalPages || 1;
+  } else {
+    let data = LIST.rows;
+    if (LIST.filter){
+      const f = LIST.filter.toLowerCase();
+      data = data.filter(r => cols.some(c => String(r[c] ?? "").toLowerCase().includes(f)));
+    }
+    total = data.length;
+    pages = Math.max(1, Math.ceil(total / LIST.perPage));
+    if (LIST.page >= pages) LIST.page = pages - 1;
+    if (LIST.page < 0) LIST.page = 0;
+    slice = data.slice(LIST.page*LIST.perPage, (LIST.page+1)*LIST.perPage);
+  }
+
+  let h = `<div class="module"><table><tr>` +
+          cols.map(c=>`<th>${esc(humanize(c))}</th>`).join("") + (hasAct?`<th></th>`:"") + `</tr>`;
+  if (!slice.length) h += `<tr><td colspan="${cols.length+1}">Sin registros.</td></tr>`;
+  for (const r of slice){
+    h += `<tr>` + cols.map((c, i) => {
+      const v = (m.format && m.format[c]) ? esc(humanize(r[c])) : cell(r[c]);
+      if (i === 0 && m.update) return `<td><a onclick='showForm("${LIST.key}", ${r.id})'><b>${v}</b></a></td>`;
+      if (i === 0 && m.detail) return `<td><a onclick='showDetail("${LIST.key}", ${r.id})'><b>${v}</b></a></td>`;
+      return `<td>${v}</td>`;
+    }).join("");
+    if (hasAct){
+      let a = `<td class="rowact" style="text-align:right">`;
+      if (m.detail) a += `<a onclick='showDetail("${LIST.key}", ${r.id})'>Ver</a>`;
+      if (m.update) a += `<a onclick='showForm("${LIST.key}", ${r.id})'>Editar</a>`;
+      if (m.rol)    a += `<a onclick='cambiarRol("${LIST.key}", ${r.id})'>Rol</a>`;
+      if (m.estado) a += `<a onclick='toggleEstado("${LIST.key}", ${r.id}, ${!!r.activo})'>${r.activo?"Desactivar":"Activar"}</a>`;
+      if (m.del)    a += `<a style="color:#ba2121" onclick='borrar("${LIST.key}", ${r.id})'>Eliminar</a>`;
+      h += a + `</td>`;
+    }
+    h += `</tr>`;
+  }
+  h += `</table></div>`;
+  h += `<div style="display:flex;justify-content:space-between;align-items:center;color:#8499ab;font-size:13px">
+    <span>${total} registro(s)</span>
+    <span>
+      <button class="btn muted" ${LIST.page<=0?'disabled':''} onclick="listPage(-1)">‹ Anterior</button>
+      <span style="margin:0 12px">Página ${LIST.page+1} de ${pages}</span>
+      <button class="btn muted" ${LIST.page>=pages-1?'disabled':''} onclick="listPage(1)">Siguiente ›</button>
+    </span></div>`;
+  el("#tbl").innerHTML = h;
+}
+
+async function showDetail(key, id){
+  if (!TOKEN || ROLE !== REQUIRED_ROLE) return showLogin();
+  const m = MODELS[key];
+  userbar();
+  shell(key, `<div class="crumbs"><a onclick="showIndex()">Inicio</a> › <a onclick="showList('${key}')">${esc(m.label)}</a> › #${id}</div><div id="det">Cargando…</div>`);
+  try {
+    const d = await api("GET", m.detail(id));
+    const doc = d.documento || d;
+    const esDoc = key === "documentos";
+    const borrador = esDoc && doc.estado === "BORRADOR";
+    let h = `<h2>${esc(m.label)} #${esc(doc.id)}</h2>`;
+    if (esDoc){
+      h += `<div style="margin-bottom:14px">
+        <button class="btn muted" onclick='downloadFile("/api/documentos/${id}/pdf","documento_${id}.pdf")'>Descargar PDF</button>
+        <button class="btn muted" onclick='downloadFile("/api/documentos/${id}/xml","documento_${id}.xml")'>Descargar XML</button>
+        ${borrador ? `<button class="btn" onclick="emitirDoc(${id})">Emitir</button>` : ""}
+        <button class="btn muted" onclick="showList('documentos')">Volver</button>
+      </div>`;
+    }
+    h += `<div class="module"><table>`;
+    for (const k of Object.keys(doc)){
+      if (typeof doc[k] !== "object") h += `<tr><th style="width:240px">${esc(k)}</th><td>${cell(doc[k])}</td></tr>`;
+    }
+    h += `</table></div>`;
+    if (esDoc || (d.detalles && d.detalles.length)){
+      const dets = d.detalles || [];
+      h += `<div class="module"><span class="caption">Detalle (${dets.length})</span><table>
+        <tr><th>#</th><th>Descripción</th><th>Cant.</th><th>P. Unit.</th><th>Subtotal</th>${borrador?"<th></th>":""}</tr>`;
+      if (!dets.length) h += `<tr><td colspan="${borrador?6:5}">Sin líneas.</td></tr>`;
+      dets.forEach((x,i)=> h += `<tr><td>${i+1}</td><td>${esc(x.descripcionItem)}</td><td>${cell(x.cantidad)}</td><td>${cell(x.precioUnitario)}</td><td>${cell(x.subtotal)}</td>${borrador?`<td style="text-align:right"><a style="color:#ba2121" onclick="eliminarLinea(${id}, ${x.id})">Eliminar</a></td>`:""}</tr>`);
+      h += `</table></div>`;
+    }
+    if (borrador){
+      h += `<div class="module" style="padding:14px"><b>Agregar línea</b>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;margin-top:10px">
+          <div style="flex:1;min-width:240px"><label class="small">Descripción</label><input id="lnDesc"></div>
+          <div><label class="small">Cantidad</label><input id="lnCant" type="number" value="1" style="max-width:110px"></div>
+          <div><label class="small">P. Unitario</label><input id="lnPrecio" type="number" style="max-width:140px"></div>
+          <button class="btn" onclick="agregarLinea(${id})">Agregar</button>
+        </div></div>`;
+    }
+    if (d.referencias && d.referencias.length){
+      h += `<div class="module"><span class="caption">Referencias</span><table>` +
+        `<tr>${Object.keys(d.referencias[0]).map(k=>`<th>${esc(k)}</th>`).join("")}</tr>` +
+        d.referencias.map(r=>`<tr>${Object.values(r).map(v=>`<td>${cell(v)}</td>`).join("")}</tr>`).join("") + `</table></div>`;
+    }
+    if (!esDoc) h += `<button class="btn muted" onclick="showList('${key}')">Volver</button>`;
+    el("#det").innerHTML = h;
+  } catch(e){ el("#det").innerHTML = `<div class="err">${esc(e.message)}</div>`; }
+}
+
+// ---- Importar TXT desde el panel ----
+function showImportTxt(){
+  if (!TOKEN || ROLE !== REQUIRED_ROLE) return showLogin();
+  userbar();
+  shell("__import", `<div class="crumbs"><a onclick="showIndex()">Inicio</a> › Importar TXT</div>
+    <h2>Importar documento desde TXT</h2>
+    <div class="module" style="padding:16px">
+      <div class="field"><label>Archivo .txt</label><input type="file" id="txtFile" accept=".txt"></div>
+      <button class="btn" onclick="previewTxt()">Previsualizar</button>
+      <div id="impMsg" class="err"></div>
+    </div>
+    <div id="impBox"></div>`);
+}
+function txtFile(){ const f = el("#txtFile").files[0]; if(!f) el("#impMsg").textContent = "Selecciona un archivo .txt primero."; return f; }
+async function previewTxt(){
+  el("#impMsg").textContent = ""; el("#impBox").innerHTML = "";
+  const f = txtFile(); if(!f) return;
+  try {
+    const d = await apiUpload("/api/documentos/importar-txt/preview", f);
+    let h = `<div class="module"><span class="caption">Previsualización</span><table>
+      <tr><th style="width:240px">Tipo de documento</th><td>${cell(d.codigoTipoDocumento)}</td></tr>
+      <tr><th>Cliente</th><td>${esc(d.clienteRazonSocial)} ${d.clienteEncontrado?'<span class="pill t">encontrado</span>':'<span class="pill f">no existe</span>'}</td></tr>
+      <tr><th>Fecha emisión → venc.</th><td>${cell(d.fechaEmision)} → ${cell(d.fechaVencimiento)}</td></tr>
+      <tr><th>Moneda</th><td>${cell(d.moneda)}</td></tr>
+      <tr><th>Neto / IVA / Total</th><td>${cell(d.montoNeto)} / ${cell(d.montoIva)} / <b>${cell(d.montoTotal)}</b></td></tr>
+      </table></div>`;
+    if (d.detalles && d.detalles.length){
+      h += `<div class="module"><span class="caption">Detalle (${d.detalles.length})</span><table>
+        <tr><th>#</th><th>Descripción</th><th>Cant.</th><th>P. Unit.</th><th>Subtotal</th></tr>`;
+      d.detalles.forEach(x=> h += `<tr><td>${cell(x.numero)}</td><td>${esc(x.descripcion)}</td><td>${cell(x.cantidad)}</td><td>${cell(x.precioUnitario)}</td><td>${cell(x.subtotal)}</td></tr>`);
+      h += `</table></div>`;
+    }
+    if (d.advertencias && d.advertencias.length){
+      h += `<div class="module" style="padding:12px"><b style="color:#f0b86e">Advertencias</b><ul>` +
+        d.advertencias.map(a=>`<li>${esc(a)}</li>`).join("") + `</ul></div>`;
+    }
+    const puede = d.clienteEncontrado;
+    h += `<button class="btn" ${puede?"":"disabled"} onclick="importTxt()">Crear BORRADOR</button>` +
+      (puede ? "" : ` <span class="small">Crea primero el cliente "${esc(d.clienteRazonSocial)}" para poder importar.</span>`);
+    el("#impBox").innerHTML = h;
+  } catch(e){ el("#impMsg").textContent = e.message; }
+}
+async function importTxt(){
+  el("#impMsg").textContent = "";
+  const f = txtFile(); if(!f) return;
+  try {
+    const d = await apiUpload("/api/documentos/importar-txt", f);
+    const id = d.documento ? d.documento.id : d.id;
+    el("#impBox").innerHTML = `<div class="module" style="padding:16px">✅ Documento creado en BORRADOR <b>#${esc(id)}</b>. <a onclick='showDetail("documentos", ${id})'>Ver documento</a></div>`;
+  } catch(e){ el("#impMsg").textContent = e.message; }
+}
+
+async function showForm(key, id){
+  if (!TOKEN || ROLE !== REQUIRED_ROLE) return showLogin();
+  const m = MODELS[key];
+  const editing = id != null;
+  const fields = (editing && m.editFields) ? m.editFields : m.fields;
+  userbar();
+  let row = {};
+  if (editing){
+    try { const all = await api("GET", m.list) || []; row = all.find(x => x.id === id) || {}; } catch(e){}
+  }
+  // Opciones para campos tipo lista (ej. rol desde /roles)
+  const selOpts = {};
+  if (m.selects){
+    for (const sf of Object.keys(m.selects)){
+      try { selOpts[sf] = await api("GET", m.selects[sf]) || []; } catch(e){ selOpts[sf] = []; }
+    }
+  }
+  let h = `<div class="crumbs"><a onclick="showIndex()">Inicio</a> › <a onclick="showList('${key}')">${esc(m.label)}</a> › ${editing?"Editar":"Agregar"}</div>
+    <h2>${editing?"Editar":"Agregar"} ${esc(m.label.replace(/s$/,""))}</h2>
+    <div class="err" id="formErr"></div><div class="module" style="padding:18px"><div class="form-grid">`;
+  for (const f of fields){
+    const t = (m.types && m.types[f]) || "text";
+    const val = row[f];
+    if (m.selects && m.selects[f]){
+      const opts = selOpts[f] || [];
+      h += `<div class="field"><label>${esc(humanize(f))}</label><select id="f_${f}">` +
+        opts.map(o => `<option value="${esc(o.nombre)}" ${val===o.nombre?"selected":""}>${esc(o.nombreMostrar||o.nombre)} (${esc(o.nombre)})</option>`).join("") +
+        `</select></div>`;
+    } else if (t === "bool"){
+      h += `<div class="field"><label>${esc(humanize(f))}</label><select id="f_${f}">
+        <option value="true" ${val===true?"selected":""}>Sí</option>
+        <option value="false" ${val===false?"selected":""}>No</option></select></div>`;
+    } else {
+      const type = t==="number" ? "number" : (f==="password" ? "password" : "text");
+      h += `<div class="field"><label>${esc(humanize(f))}${f==="password"&&editing?" (dejar vacío = no cambiar)":""}</label>
+        <input id="f_${f}" type="${type}" value="${val==null?"":esc(val)}"></div>`;
+    }
+  }
+  h += `</div><div style="margin-top:8px"><button class="btn" onclick='saveForm("${key}", ${editing?id:null})'>Guardar</button>
+        <button class="btn muted" onclick="showList('${key}')">Cancelar</button></div></div>`;
+  shell(key, h);
+}
+
+async function saveForm(key, id){
+  const m = MODELS[key];
+  const editing = id != null;
+  const fields = (editing && m.editFields) ? m.editFields : m.fields;
+  const body = {};
+  for (const f of fields){
+    const node = el("#f_"+f); if (!node) continue;
+    let v = node.value;
+    const t = (m.types && m.types[f]) || "text";
+    if (t === "bool") v = (v === "true");
+    else if (t === "number") v = v===""? null : Number(v);
+    else if (v === "" && f === "password") continue;
+    body[f] = v;
+  }
+  try {
+    if (editing) await api("PUT", m.update(id), body);
+    else         await api("POST", m.create, body);
+    toast(editing ? "Actualizado" : "Creado", "ok");
+    showList(key);
+  } catch(e){ el("#formErr").textContent = e.message; toast(e.message, "err"); }
+}
+
+async function toggleEstado(key, id, activo){
+  const m = MODELS[key];
+  try {
+    if (m.estadoMode === "query") await api("PATCH", m.estado(id) + "?activo=" + (!activo));
+    else await api("PATCH", m.estado(id), { activo: !activo });
+    showList(key);
+  } catch(e){ toast(e.message, "err"); }
+}
+async function cambiarRol(key, id){
+  const nuevo = prompt("Nuevo rol (ej: ROLE_ADMIN, ROLE_USER):");
+  if (!nuevo) return;
+  try { await api("PATCH", MODELS[key].rol(id), { rol: nuevo.trim() }); showList(key); }
+  catch(e){ toast(e.message, "err"); }
+}
+// Modal de confirmación (reemplaza al confirm() del navegador)
+function confirmar(mensaje){
+  return new Promise(resolve => {
+    const ov = document.createElement("div");
+    ov.className = "modal-ov";
+    ov.innerHTML = `<div class="modal-box">
+      <div style="font-size:15px;line-height:1.45;margin-bottom:20px">${esc(mensaje)}</div>
+      <div style="text-align:right">
+        <button class="btn muted" id="cfNo">Cancelar</button>
+        <button class="btn" id="cfYes" style="background:#ba2121">Eliminar</button>
+      </div></div>`;
+    document.body.appendChild(ov);
+    const close = v => { ov.remove(); resolve(v); };
+    ov.querySelector("#cfNo").onclick = () => close(false);
+    ov.querySelector("#cfYes").onclick = () => close(true);
+    ov.onclick = e => { if (e.target === ov) close(false); };
+  });
+}
+async function borrar(key, id){
+  if (!(await confirmar("¿Seguro que quieres eliminar el registro #" + id + "? Esta acción no se puede deshacer."))) return;
+  try { await api("DELETE", MODELS[key].del(id)); toast("Eliminado", "ok"); showList(key); }
+  catch(e){ toast(e.message, "err"); }
+}
+
+// ---- Descargas (PDF/XML) con token ----
+async function downloadFile(path, filename){
+  try {
+    let res = await fetch(API + path, { headers: TOKEN ? {Authorization:"Bearer "+TOKEN} : {} });
+    if ((res.status===401||res.status===403) && TOKEN && await tryRefresh())
+      res = await fetch(API + path, { headers: {Authorization:"Bearer "+TOKEN} });
+    if (!res.ok){
+      if ((res.status===401||res.status===403) && TOKEN){ logout(); return; }
+      toast("Error al descargar (HTTP " + res.status + ")", "err"); return;
+    }
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a"); a.href = url; a.download = filename; a.click();
+    URL.revokeObjectURL(url);
+  } catch(e){ toast(e.message, "err"); }
+}
+
+// ---- Acciones de documentos ----
+async function emitirDoc(id){
+  if (!confirm("¿Emitir el documento #" + id + "? Asignará folio y pasará a EMITIDO.")) return;
+  try { await api("POST", `/api/documentos/${id}/emitir`); toast("Documento emitido", "ok"); showDetail("documentos", id); }
+  catch(e){ toast(e.message, "err"); }
+}
+async function agregarLinea(id){
+  const desc = el("#lnDesc").value.trim(), cant = el("#lnCant").value, precio = el("#lnPrecio").value;
+  if (!desc || cant==="" || precio===""){ toast("Completa descripción, cantidad y precio.", "err"); return; }
+  try { await api("POST", `/api/documentos/${id}/detalles`, { descripcion:desc, cantidad:Number(cant), precioUnitario:Number(precio) }); showDetail("documentos", id); }
+  catch(e){ toast(e.message, "err"); }
+}
+async function eliminarLinea(id, detId){
+  if (!confirm("¿Eliminar la línea?")) return;
+  try { await api("DELETE", `/api/documentos/${id}/detalles/${detId}`); showDetail("documentos", id); }
+  catch(e){ toast(e.message, "err"); }
+}
+
+// ---- Crear documento desde el panel ----
+async function showNuevoDoc(){
+  if (!TOKEN || ROLE !== REQUIRED_ROLE) return showLogin();
+  userbar();
+  shell("documentos", `<div class="crumbs"><a onclick="showIndex()">Inicio</a> › <a onclick="showList('documentos')">Documentos</a> › Nuevo</div>
+    <h2>Nuevo documento</h2><div id="ndBox" class="module" style="padding:16px">Cargando…</div>`);
+  let tipos = [], clientes = [];
+  try { tipos = await api("GET", "/api/tipos-documento") || []; } catch(e){}
+  try { clientes = await api("GET", "/clientes") || []; } catch(e){}
+  el("#ndBox").innerHTML = `
+    <div class="field"><label>Tipo de documento</label><select id="ndTipo">${tipos.map(t=>`<option value="${t.codigoSii}">${esc(t.codigoSii+" - "+t.descripcion)}</option>`).join("")}</select></div>
+    <div class="field"><label>Cliente</label><select id="ndCli">${clientes.map(c=>`<option value="${c.id}">${esc(c.razonSocial)}</option>`).join("")}</select></div>
+    <div class="err" id="ndErr"></div>
+    <button class="btn" onclick="crearDoc()">Crear (BORRADOR)</button>
+    <button class="btn muted" onclick="showList('documentos')">Cancelar</button>
+    <p class="small">Luego podrás agregar las líneas y emitir el documento.</p>`;
+  if (!clientes.length) el("#ndErr").textContent = "No hay clientes en esta empresa. Crea un cliente primero.";
+}
+async function crearDoc(){
+  try {
+    const d = await api("POST", "/api/documentos", {
+      codigoTipoDocumento: Number(el("#ndTipo").value),
+      clienteId: Number(el("#ndCli").value)
+    });
+    const id = d.documento ? d.documento.id : d.id;
+    showDetail("documentos", id);
+  } catch(e){ el("#ndErr").textContent = e.message; }
+}
+
+// ---------------------------------------------------------------- arranque
+if (TOKEN && tokenVigente(TOKEN) && roleFromToken(TOKEN) === REQUIRED_ROLE) showIndex(); else { logout(); }
+</script>
+</body>
+</html>

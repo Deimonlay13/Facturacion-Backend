@@ -1,0 +1,9 @@
+target/
+backups/
+.env
+.git
+.idea
+.vscode
+*.iml
+HELP.md
+node_modules/

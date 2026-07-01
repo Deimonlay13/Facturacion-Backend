@@ -1,0 +1,22 @@
+# Blueprint de Render para desplegar el backend como Web Service (Docker).
+# La BD ya está en Render aparte; este servicio expone API + panel + Swagger.
+services:
+  - type: web
+    name: facturacion-dte
+    runtime: docker
+    plan: free
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /v3/api-docs
+    envVars:
+      # Por defecto la app usa application.properties. Para apuntar a otra BD u
+      # ocultar secretos, define estas variables (Spring las toma automáticamente):
+      - key: SPRING_DATASOURCE_URL
+        sync: false
+      - key: SPRING_DATASOURCE_USERNAME
+        sync: false
+      - key: SPRING_DATASOURCE_PASSWORD
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+      - key: SRE_API_TOKEN
+        sync: false

@@ -4,6 +4,7 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
 
+import com.gdl.facturacion_backend.enums.EstadoDocumento;
 import com.gdl.facturacion_backend.enums.EstadoDocumentoSii;
 import com.gdl.facturacion_backend.enums.Moneda;
 
@@ -11,7 +12,10 @@ import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
 @Entity
-@Table(name = "documentos_tributarios")
+@Table(name = "documentos_tributarios", indexes = {
+        @Index(name = "idx_doc_empresa", columnList = "id_empresa"),
+        @Index(name = "idx_doc_empresa_cliente", columnList = "id_empresa,id_cliente")
+})
 @Getter
 @Setter
 public class DocumentoTributarioEntity extends BaseModelEntity {
@@ -45,6 +49,45 @@ public class DocumentoTributarioEntity extends BaseModelEntity {
 
     private String correo;
 
+    @Column(name = "rut_emisor")
+    private String rutEmisor;
+
+    @Column(name = "razon_social_emisor")
+    private String razonSocialEmisor;
+
+    @Column(name = "nombre_fantasia_emisor")
+    private String nombreFantasiaEmisor;
+
+    @Column(name = "giro_emisor")
+    private String giroEmisor;
+
+    @Column(name = "direccion_emisor")
+    private String direccionEmisor;
+
+    @Column(name = "ciudad_emisor")
+    private String ciudadEmisor;
+
+    @Column(name = "comuna_emisor")
+    private String comunaEmisor;
+
+    @Column(name = "pais_emisor")
+    private String paisEmisor;
+
+    @Column(name = "telefono_emisor")
+    private String telefonoEmisor;
+
+    @Column(name = "email_principal_emisor")
+    private String emailPrincipalEmisor;
+
+    @Column(name = "email_contabilidad_emisor")
+    private String emailContabilidadEmisor;
+
+    @Column(name = "rut_representante_emisor")
+    private String rutRepresentanteEmisor;
+
+    @Column(name = "nombre_representante_emisor")
+    private String nombreRepresentanteEmisor;
+
     @Column(columnDefinition = "TEXT")
     private String observaciones;
 
@@ -64,6 +107,10 @@ public class DocumentoTributarioEntity extends BaseModelEntity {
     private BigDecimal montoTotal;
 
     @Enumerated(EnumType.STRING)
+    @Column(name = "estado")
+    private EstadoDocumento estado;
+
+    @Enumerated(EnumType.STRING)
     @Column(name = "estado_sii")
     private EstadoDocumentoSii estadoSii;
 
@@ -79,6 +126,7 @@ public class DocumentoTributarioEntity extends BaseModelEntity {
 
     @OneToMany(mappedBy = "documento")
     private List<ReferenciaDocumentoEntity> referencias;
+
+    @OneToOne(mappedBy = "documento", cascade = CascadeType.ALL, orphanRemoval = true)
+    private GuiaDespachoExtraEntity guiaDespacho;
 }
-
-
