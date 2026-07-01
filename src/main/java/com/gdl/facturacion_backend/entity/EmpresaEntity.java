@@ -47,4 +47,12 @@ public class EmpresaEntity  extends BaseGlobalEntity {
     @Column(name = "telefono_representante")
     private String telefonoRepresentante;
 
+    @Column(name = "logo_bytes", columnDefinition = "bytea")
+    private byte[] logo;
+
+    @Column(name = "logo_content_type")
+    private String logoContentType;
+
+    @Column(name = "logo_filename")
+    private String logoFilename;
 }

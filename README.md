@@ -37,6 +37,29 @@ el super-usuario `root/1234`, y los tipos de documento 33/34/52/56/61.
 - Solo admin/super-admin: `/usuarios`, `/empresas`, `/roles`, `/auditoria`, `/api/folios`.
 - Cualquier usuario autenticado: clientes, productos, documentos.
 
+## Logo de empresa
+- Subir logo: `POST /empresas/{id}/logo` usando `multipart/form-data` con el campo `file`.
+- Ver logo: `GET /empresas/{id}/logo`.
+- Eliminar logo: `DELETE /empresas/{id}/logo`.
+- Formatos permitidos: PNG o JPG/JPEG, máximo 1 MB.
+- Si la empresa tiene logo cargado, se imprime automáticamente en el PDF de la factura.
+
+## Flujo simple de folios
+1. Cargar folios simples: `POST /api/folios/simple` con `codigoTipoDocumento` y `cantidad`.
+   Ejemplo: si cargas 20 folios para factura afecta `33`, se crean los folios 1 al 20.
+   Si después cargas 30 más, se crean automáticamente del 21 al 50.
+   Aplica para factura afecta `33`, factura exenta `34`, nota de débito `56` y nota de crédito `61`.
+   También existe la carga CAF/rango tradicional: `POST /api/folios/caf`.
+2. Revisar disponibilidad: `GET /api/folios/resumen` o
+   `GET /api/folios/resumen/{codigoTipoDocumento}`. La respuesta muestra el CAF activo,
+   el siguiente folio, los disponibles y si está listo para emitir.
+3. Crear documento en borrador.
+4. Emitir documento: el backend toma automáticamente el siguiente folio disponible,
+   lo marca como utilizado y deja el documento en estado `EMITIDO`.
+5. Si no hay folios disponibles, el backend rechaza la emisión y no permite facturar.
+6. Descargar PDF: si el documento fue emitido, saldrá con folio real; si no, saldrá como
+   `BORRADOR`.
+
 ## Auditoría
 Las operaciones de escritura de los servicios se registran en la tabla `auditoria`
 (quién, qué tabla, qué acción, cuándo). Visible en el panel → **Sistema → Auditoría**

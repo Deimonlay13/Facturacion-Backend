@@ -3,7 +3,9 @@ package com.gdl.facturacion_backend.controller;
 import com.gdl.facturacion_backend.dto.folio.CafCargaRequest;
 import com.gdl.facturacion_backend.dto.folio.CafResponse;
 import com.gdl.facturacion_backend.dto.folio.ControlFolioResponse;
+import com.gdl.facturacion_backend.dto.folio.FolioCargaSimpleRequest;
 import com.gdl.facturacion_backend.dto.folio.FolioResponse;
+import com.gdl.facturacion_backend.dto.folio.FolioResumenResponse;
 import com.gdl.facturacion_backend.service.FolioService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
@@ -28,6 +30,12 @@ public class FolioController {
         return service.cargarCaf(request);
     }
 
+    @PostMapping("/simple")
+    @ResponseStatus(HttpStatus.CREATED)
+    public FolioResumenResponse cargarFoliosSimple(@Valid @RequestBody FolioCargaSimpleRequest request) {
+        return service.cargarFoliosSimple(request);
+    }
+
     @GetMapping("/caf")
     public List<CafResponse> listarCafs() {
         return service.listarCafs();
@@ -36,6 +44,16 @@ public class FolioController {
     @GetMapping("/control")
     public List<ControlFolioResponse> listarControles() {
         return service.listar().stream().map(ControlFolioResponse::from).toList();
+    }
+
+    @GetMapping("/resumen")
+    public List<FolioResumenResponse> resumenFolios() {
+        return service.resumenFolios();
+    }
+
+    @GetMapping("/resumen/{codigoTipoDocumento}")
+    public FolioResumenResponse resumenFolio(@PathVariable Integer codigoTipoDocumento) {
+        return service.resumenFolio(codigoTipoDocumento);
     }
 
     @GetMapping

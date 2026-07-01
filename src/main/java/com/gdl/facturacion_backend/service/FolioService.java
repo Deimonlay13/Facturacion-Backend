@@ -2,6 +2,8 @@ package com.gdl.facturacion_backend.service;
 
 import com.gdl.facturacion_backend.dto.folio.CafCargaRequest;
 import com.gdl.facturacion_backend.dto.folio.CafResponse;
+import com.gdl.facturacion_backend.dto.folio.FolioCargaSimpleRequest;
+import com.gdl.facturacion_backend.dto.folio.FolioResumenResponse;
 import com.gdl.facturacion_backend.entity.CafEntity;
 import com.gdl.facturacion_backend.entity.ControlFolioEntity;
 import com.gdl.facturacion_backend.entity.EmpresaEntity;
@@ -22,6 +24,8 @@ import java.util.List;
 
 @Service
 public class FolioService extends BaseTenantService<ControlFolioEntity> {
+
+    private static final List<Integer> TIPOS_FOLIO_SIMPLE = List.of(33, 34, 56, 61);
 
     private final ControlFolioRepository controlFolioRepository;
     private final CafRepository cafRepository;
@@ -99,14 +103,70 @@ public class FolioService extends BaseTenantService<ControlFolioEntity> {
     }
 
     @Transactional
-    public Integer asignarSiguienteFolio(Integer codigoTipoDocumento) {
+    public FolioResumenResponse cargarFoliosSimple(FolioCargaSimpleRequest request) {
+        validarTipoSimple(request.getCodigoTipoDocumento());
+
+        Long empresaId = getEmpresaId();
+        TipoDocumentoEntity tipo = tipoDocumentoService.findByCodigoSii(request.getCodigoTipoDocumento());
+        int ultimo = folioRepository
+                .findFirstByTipoDocumentoCodigoSiiAndEmpresaIdOrderByNumeroDesc(
+                        request.getCodigoTipoDocumento(), empresaId)
+                .map(FolioEntity::getNumero)
+                .orElse(0);
+        int desde = ultimo + 1;
+        int hasta = ultimo + request.getCantidad();
+
+        CafEntity caf = new CafEntity();
+        caf.setEmpresa(empresaRef(empresaId));
+        caf.setTipoDocumento(tipo);
+        caf.setRangoDesde(desde);
+        caf.setRangoHasta(hasta);
+        caf.setFechaAutorizacion(LocalDate.now());
+        caf.setCafXml("FOLIOS_SIMPLES_GENERADOS_INTERNAMENTE");
+        caf.setEstado(EstadoCaf.DISPONIBLE);
+        CafEntity guardado = cafRepository.save(caf);
+
+        folioRepository.saveAll(generarFolios(guardado, tipo, empresaId));
+
+        ControlFolioEntity control = controlFolioRepository
+                .findByTipoDocumentoCodigoSiiAndEmpresaId(request.getCodigoTipoDocumento(), empresaId)
+                .orElseGet(() -> {
+                    ControlFolioEntity nuevo = new ControlFolioEntity();
+                    nuevo.setTipoDocumento(tipo);
+                    nuevo.setUltimoFolioUtilizado(ultimo > 0 ? ultimo : null);
+                    return nuevo;
+                });
+        control.setCafActivo(guardado);
+        controlFolioRepository.save(control);
+
+        return toResumen(control, empresaId);
+    }
+
+    public List<FolioResumenResponse> resumenFolios() {
+        Long empresaId = getEmpresaId();
+        return controlFolioRepository.findAllByEmpresaId(empresaId).stream()
+                .map(control -> toResumen(control, empresaId))
+                .toList();
+    }
+
+    public FolioResumenResponse resumenFolio(Integer codigoTipoDocumento) {
         Long empresaId = getEmpresaId();
         ControlFolioEntity control = controlFolioRepository
                 .findByTipoDocumentoCodigoSiiAndEmpresaId(codigoTipoDocumento, empresaId)
                 .orElseThrow(() -> new ReglaNegocioException(
                         "No hay CAF cargado para el tipo " + codigoTipoDocumento));
+        return toResumen(control, empresaId);
+    }
+
+    @Transactional
+    public Integer asignarSiguienteFolio(Integer codigoTipoDocumento) {
+        Long empresaId = getEmpresaId();
+        ControlFolioEntity control = controlFolioRepository
+                .findByTipoDocumentoCodigoSiiAndEmpresaId(codigoTipoDocumento, empresaId)
+                .orElseThrow(() -> new ReglaNegocioException(
+                        "No hay folios cargados para el tipo " + codigoTipoDocumento));
         if (control.getCafActivo() == null) {
-            throw new ReglaNegocioException("No hay CAF activo para el tipo " + codigoTipoDocumento);
+            throw new ReglaNegocioException("No hay folios disponibles para el tipo " + codigoTipoDocumento);
         }
 
         FolioEntity folio = folioRepository
@@ -115,7 +175,8 @@ public class FolioService extends BaseTenantService<ControlFolioEntity> {
                 .orElseThrow(() -> {
                     marcarCafAgotado(control.getCafActivo(), empresaId);
                     return new ReglaNegocioException(
-                            "No hay folios disponibles para el tipo " + codigoTipoDocumento);
+                            "No hay folios disponibles para el tipo " + codigoTipoDocumento
+                                    + ". Cargue nuevos folios antes de facturar.");
                 });
 
         folio.setEstado(EstadoFolio.RESERVADO);
@@ -160,6 +221,23 @@ public class FolioService extends BaseTenantService<ControlFolioEntity> {
         return CafResponse.from(caf, generados, disponibles);
     }
 
+    private FolioResumenResponse toResumen(ControlFolioEntity control, Long empresaId) {
+        Integer codigoSii = control.getTipoDocumento() != null
+                ? control.getTipoDocumento().getCodigoSii()
+                : null;
+        if (codigoSii == null) {
+            return FolioResumenResponse.from(control, null, 0);
+        }
+
+        long disponibles = folioRepository.countByTipoDocumentoCodigoSiiAndEmpresaIdAndEstado(
+                codigoSii, empresaId, EstadoFolio.DISPONIBLE);
+        FolioEntity siguiente = folioRepository
+                .findFirstByTipoDocumentoCodigoSiiAndEmpresaIdAndEstadoOrderByNumeroAsc(
+                        codigoSii, empresaId, EstadoFolio.DISPONIBLE)
+                .orElse(null);
+        return FolioResumenResponse.from(control, siguiente, disponibles);
+    }
+
     private void marcarCafAgotado(CafEntity caf, Long empresaId) {
         if (caf == null || caf.getEstado() == EstadoCaf.AGOTADO) {
             return;
@@ -169,6 +247,14 @@ public class FolioService extends BaseTenantService<ControlFolioEntity> {
         if (disponibles == 0) {
             caf.setEstado(EstadoCaf.AGOTADO);
             cafRepository.save(caf);
+        }
+    }
+
+    private void validarTipoSimple(Integer codigoTipoDocumento) {
+        if (!TIPOS_FOLIO_SIMPLE.contains(codigoTipoDocumento)) {
+            throw new ReglaNegocioException(
+                    "La carga simple solo está permitida para factura afecta (33), "
+                            + "factura exenta (34), nota de débito (56) y nota de crédito (61)");
         }
     }
 

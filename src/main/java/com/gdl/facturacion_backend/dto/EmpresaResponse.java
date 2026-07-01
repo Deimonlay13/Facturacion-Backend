@@ -23,6 +23,8 @@ public class EmpresaResponse {
     String rutRepresentante;
     String nombreRepresentante;
     String telefonoRepresentante;
+    Boolean tieneLogo;
+    String logoUrl;
     Boolean activo;
     LocalDateTime createdAt;
     LocalDateTime updatedAt;
@@ -45,6 +47,10 @@ public class EmpresaResponse {
                 e.getRutRepresentante(),
                 e.getNombreRepresentante(),
                 e.getTelefonoRepresentante(),
+                e.getLogoFilename() != null && !e.getLogoFilename().isBlank(),
+                e.getLogoFilename() != null && !e.getLogoFilename().isBlank()
+                        ? "/empresas/" + e.getId() + "/logo"
+                        : null,
                 e.getActivo(),
                 e.getCreatedAt(),
                 e.getUpdatedAt()

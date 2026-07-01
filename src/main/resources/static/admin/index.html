@@ -173,9 +173,9 @@ async function api(method, path, body) {
 }
 
 // Subida de archivo (multipart) — no fija Content-Type para que el navegador ponga el boundary
-async function apiUpload(path, file){
+async function apiUpload(path, file, fieldName = "archivo"){
   const doFetch = () => {
-    const fd = new FormData(); fd.append("archivo", file);
+    const fd = new FormData(); fd.append(fieldName, file);
     return fetch(API + path, { method:"POST", headers: TOKEN?{Authorization:"Bearer "+TOKEN}:{}, body: fd });
   };
   let res = await doFetch();

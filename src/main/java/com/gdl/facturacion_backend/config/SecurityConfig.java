@@ -39,8 +39,10 @@ public class SecurityConfig {
                         .requestMatchers("/swagger-ui/**", "/swagger-ui.html", "/v3/api-docs/**",
                                 "/swagger-resources/**", "/webjars/**").permitAll()
                         .requestMatchers("/api/tipos-documento/**").permitAll()
+                        .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                         // Crear empresa queda abierto para el bootstrap (sin empresa no hay token)
                         .requestMatchers(HttpMethod.POST, "/empresas").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/empresas/*/logo").permitAll()
 
                         // --- Solo administradores ---
                         .requestMatchers("/empresas/**").hasAnyAuthority("ROLE_SUPER_ADMIN", "ROLE_ADMIN")
@@ -79,8 +81,7 @@ public class SecurityConfig {
                 "http://127.0.0.1:*"));
         configuration.setAllowedMethods(List.of(
                 "GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
-        configuration.setAllowedHeaders(List.of(
-                "Authorization", "Content-Type", "X-Tenant-ID"));
+        configuration.setAllowedHeaders(List.of("*"));
         configuration.setExposedHeaders(List.of("Authorization"));
         configuration.setAllowCredentials(true);
 
