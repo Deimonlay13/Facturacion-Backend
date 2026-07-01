@@ -9,9 +9,12 @@ import com.lowagie.text.Document;
 import com.lowagie.text.Element;
 import com.lowagie.text.Font;
 import com.lowagie.text.FontFactory;
+import com.lowagie.text.Image;
 import com.lowagie.text.PageSize;
 import com.lowagie.text.Paragraph;
 import com.lowagie.text.Phrase;
+import com.lowagie.text.Rectangle;
+import com.lowagie.text.pdf.BarcodePDF417;
 import com.lowagie.text.pdf.PdfPCell;
 import com.lowagie.text.pdf.PdfPTable;
 import com.lowagie.text.pdf.PdfWriter;
@@ -20,15 +23,20 @@ import java.awt.Color;
 import java.io.ByteArrayOutputStream;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.text.NumberFormat;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
+import java.util.HexFormat;
 import java.util.List;
 import java.util.Locale;
 
 final class DocumentoPdfGenerator {
 
     private static final Color ROJO_SII = new Color(190, 25, 45);
+    private static final Color AZUL_INSTITUCIONAL = new Color(26, 48, 78);
     private static final Color GRIS_CABECERA = new Color(226, 230, 234);
     private static final Color GRIS_SUAVE = new Color(247, 248, 249);
     private static final Color BORDE = new Color(95, 95, 95);
@@ -38,6 +46,9 @@ final class DocumentoPdfGenerator {
     private static final Font NORMAL = FontFactory.getFont(FontFactory.HELVETICA, 7.2f);
     private static final Font NORMAL_GRANDE = FontFactory.getFont(FontFactory.HELVETICA, 8f);
     private static final Font TITULO_SECCION = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 8f);
+    private static final Font TIMBRE_TITULO = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 9f, AZUL_INSTITUCIONAL);
+    private static final Font TIMBRE_TEXTO = FontFactory.getFont(FontFactory.HELVETICA, 6.8f);
+    private static final Font TIMBRE_CODIGO = FontFactory.getFont(FontFactory.COURIER_BOLD, 6.5f, AZUL_INSTITUCIONAL);
     private static final Font SII = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 11.5f, ROJO_SII);
     private static final Font FOLIO = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 15, ROJO_SII);
     private static final Font TOTAL = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 9);
@@ -82,6 +93,12 @@ final class DocumentoPdfGenerator {
         datosEmisor.setBorder(PdfPCell.NO_BORDER);
         datosEmisor.setPaddingRight(18);
         datosEmisor.setVerticalAlignment(Element.ALIGN_TOP);
+        Image logo = logoEmpresa(emisor);
+        if (logo != null) {
+            logo.setAlignment(Image.ALIGN_LEFT);
+            logo.scaleToFit(120, 52);
+            datosEmisor.addElement(logo);
+        }
         datosEmisor.addElement(new Paragraph(
                 valor(doc.getNombreFantasiaEmisor(),
                         valor(doc.getRazonSocialEmisor(), emisor.getRazonSocial())), EMPRESA));
@@ -289,15 +306,20 @@ final class DocumentoPdfGenerator {
         timbre.setBorderColor(BORDE);
         timbre.setPadding(7);
         timbre.setMinimumHeight(108);
-        timbre.addElement(centrado("TIMBRE ELECTRÓNICO S.I.I.", TITULO_SECCION));
+        timbre.addElement(centrado("TIMBRE DIGITAL DEL DOCUMENTO", TIMBRE_TITULO));
+        Image codigoBarras = generarTimbrePdf417(doc);
+        if (codigoBarras != null) {
+            codigoBarras.setAlignment(Image.ALIGN_CENTER);
+            codigoBarras.scaleAbsolute(165, 54);
+            timbre.addElement(codigoBarras);
+        }
+        timbre.addElement(centrado("Codigo de verificacion", TIMBRE_TEXTO));
+        timbre.addElement(centrado(codigoVerificacion(doc), TIMBRE_CODIGO));
         timbre.addElement(centrado(
-                "Documento tributario electrónico\n"
-                        + "Verifique documento: www.sii.cl\n\n"
-                        + "FECHA RECEPCIÓN: ____________________\n"
-                        + "RECINTO: ____________________________\n"
-                        + "NOMBRE: _____________________________\n"
-                        + "RUT: ________________________________\n"
-                        + "FIRMA: ______________________________", NORMAL));
+                "Representacion digital para validacion interna.\n"
+                        + "El timbre oficial SII requiere TED firmado con CAF.\n"
+                        + "Verifique documentos tributarios en www.sii.cl",
+                TIMBRE_TEXTO));
         pie.addCell(timbre);
 
         PdfPTable totales = new PdfPTable(new float[]{1.2f, 1f});
@@ -474,5 +496,59 @@ final class DocumentoPdfGenerator {
 
     private static String resto(long numero) {
         return numero > 0 ? " " + numeroEnPalabras(numero) : "";
+    }
+
+    private static Image generarTimbrePdf417(DocumentoTributarioEntity doc) {
+        try {
+            BarcodePDF417 barcode = new BarcodePDF417();
+            barcode.setOptions(BarcodePDF417.PDF417_USE_ASPECT_RATIO);
+            barcode.setAspectRatio(3.0f);
+            barcode.setText(payloadTimbre(doc));
+            Image image = barcode.getImage();
+            image.setBorder(Rectangle.NO_BORDER);
+            return image;
+        } catch (RuntimeException e) {
+            return null;
+        }
+    }
+
+    private static Image logoEmpresa(EmpresaEntity emisor) {
+        if (emisor == null || emisor.getLogo() == null || emisor.getLogo().length == 0) {
+            return null;
+        }
+        try {
+            return Image.getInstance(emisor.getLogo());
+        } catch (RuntimeException | java.io.IOException e) {
+            return null;
+        }
+    }
+
+    private static String payloadTimbre(DocumentoTributarioEntity doc) {
+        return "DTE"
+                + "|RUT_EMISOR=" + valor(doc.getRutEmisor(), "")
+                + "|TIPO=" + (doc.getTipoDocumento() != null ? doc.getTipoDocumento().getCodigoSii() : "")
+                + "|FOLIO=" + valor(doc.getFolio() != null ? doc.getFolio().toString() : null, "BORRADOR")
+                + "|FECHA=" + fecha(doc.getFechaEmision())
+                + "|RUT_RECEPTOR=" + valor(doc.getRut(), "")
+                + "|TOTAL=" + monto(doc.getMontoTotal())
+                + "|CODIGO=" + codigoVerificacion(doc);
+    }
+
+    private static String codigoVerificacion(DocumentoTributarioEntity doc) {
+        String base = valor(doc.getRutEmisor(), "")
+                + "|" + (doc.getTipoDocumento() != null ? doc.getTipoDocumento().getCodigoSii() : "")
+                + "|" + (doc.getFolio() != null ? doc.getFolio() : "BORRADOR")
+                + "|" + fecha(doc.getFechaEmision())
+                + "|" + valor(doc.getRut(), "")
+                + "|" + (doc.getMontoTotal() != null
+                        ? doc.getMontoTotal().setScale(0, RoundingMode.HALF_UP)
+                        : BigDecimal.ZERO);
+        try {
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            byte[] hash = digest.digest(base.getBytes(StandardCharsets.UTF_8));
+            return HexFormat.of().formatHex(hash).substring(0, 24).toUpperCase(Locale.ROOT);
+        } catch (NoSuchAlgorithmException e) {
+            return Integer.toHexString(base.hashCode()).toUpperCase(Locale.ROOT);
+        }
     }
 }

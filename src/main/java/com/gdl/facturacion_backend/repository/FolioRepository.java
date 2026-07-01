@@ -24,6 +24,19 @@ public interface FolioRepository extends BaseTenantRepository<FolioEntity> {
 
     long countByCafIdAndEmpresaIdAndEstado(Long cafId, Long empresaId, EstadoFolio estado);
 
+    long countByTipoDocumentoCodigoSiiAndEmpresaIdAndEstado(Integer codigoSii,
+                                                            Long empresaId,
+                                                            EstadoFolio estado);
+
+    Optional<FolioEntity> findFirstByTipoDocumentoCodigoSiiAndEmpresaIdAndEstadoOrderByNumeroAsc(
+            Integer codigoSii,
+            Long empresaId,
+            EstadoFolio estado);
+
+    Optional<FolioEntity> findFirstByTipoDocumentoCodigoSiiAndEmpresaIdOrderByNumeroDesc(
+            Integer codigoSii,
+            Long empresaId);
+
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     Optional<FolioEntity> findFirstByCafIdAndEmpresaIdAndEstadoOrderByNumeroAsc(
             Long cafId,
