@@ -88,3 +88,20 @@ docker run -p 8080:8080 facturacion-dte
 En Render: Web Service tipo Docker (ver `render.yaml`). Para apuntar a otra BD u ocultar
 secretos, define `SPRING_DATASOURCE_URL`, `SPRING_DATASOURCE_USERNAME`,
 `SPRING_DATASOURCE_PASSWORD`, `JWT_SECRET`, `SRE_API_TOKEN` como variables de entorno.
+## Despliegue en AWS EC2 con Docker Compose
+1. Provisiona una EC2 con Docker y Docker Compose instalados.
+2. Copia el repositorio a la instancia y crea un archivo `.env` basado en `.env.example`.
+3. Ajusta `SPRING_DATASOURCE_URL`, `SPRING_DATASOURCE_USERNAME`, `SPRING_DATASOURCE_PASSWORD`,
+   `JWT_SECRET` y `SRE_API_TOKEN` según tu entorno.
+4. Lanza los contenedores:
+   ```bash
+docker compose up -d
+```
+5. El backend quedará disponible en `http://<EC2-IP>:8080`.
+
+> En AWS EC2, solo necesitas exponer el puerto 8080 en el Security Group. La base de datos PostgreSQL queda dentro del mismo `docker compose` y no debe abrirse públicamente.
+
+> Si quieres todo en AWS, usa esta configuración de EC2 + Docker Compose. El servicio de Render ya no es necesario para este despliegue local en EC2.
+
+## Docker Compose para EC2
+Se agrega un `docker-compose.yml` que levanta la aplicación Spring Boot junto a PostgreSQL en la misma EC2. Para cambiar credenciales, actualiza el archivo `.env` local y vuelve a recrear los servicios con `docker compose up -d`.
