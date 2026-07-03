@@ -43,13 +43,14 @@ public class SecurityConfig {
                         // Crear empresa queda abierto para el bootstrap (sin empresa no hay token)
                         .requestMatchers(HttpMethod.POST, "/empresas").permitAll()
                         .requestMatchers(HttpMethod.GET, "/empresas/*/logo").permitAll()
-
                         // --- Solo administradores ---
                         .requestMatchers("/empresas/**").hasAnyAuthority("ROLE_SUPER_ADMIN", "ROLE_ADMIN")
                         .requestMatchers("/roles/**").hasAnyAuthority("ROLE_SUPER_ADMIN", "ROLE_ADMIN")
                         .requestMatchers("/usuarios/**").hasAnyAuthority("ROLE_SUPER_ADMIN", "ROLE_ADMIN")
                         .requestMatchers("/auditoria/**").hasAnyAuthority("ROLE_SUPER_ADMIN", "ROLE_ADMIN")
                         .requestMatchers("/api/folios/**").hasAnyAuthority("ROLE_SUPER_ADMIN", "ROLE_ADMIN")
+                        .requestMatchers("/dashboard/admin").hasAnyAuthority("ROLE_SUPER_ADMIN", "ROLE_ADMIN", "ROLE_USER")
+                        .requestMatchers("/dashboard/super-admin").hasAuthority("ROLE_SUPER_ADMIN")
 
                         // --- Cualquier usuario autenticado (clientes, productos, documentos) ---
                         .anyRequest().authenticated())

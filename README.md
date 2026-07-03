@@ -91,8 +91,7 @@ secretos, define `SPRING_DATASOURCE_URL`, `SPRING_DATASOURCE_USERNAME`,
 ## Despliegue en AWS EC2 con Docker Compose
 1. Provisiona una EC2 con Docker y Docker Compose instalados.
 2. Copia el repositorio a la instancia y crea un archivo `.env` basado en `.env.example`.
-3. Ajusta `SPRING_DATASOURCE_URL`, `SPRING_DATASOURCE_USERNAME`, `SPRING_DATASOURCE_PASSWORD`,
-   `JWT_SECRET` y `SRE_API_TOKEN` según tu entorno.
+3. Ajusta `SPRING_DATASOURCE_USERNAME`, `SPRING_DATASOURCE_PASSWORD`, `JWT_SECRET` y `SRE_API_TOKEN` según tu entorno.
 4. Lanza los contenedores:
    ```bash
 docker compose up -d
@@ -101,7 +100,21 @@ docker compose up -d
 
 > En AWS EC2, solo necesitas exponer el puerto 8080 en el Security Group. La base de datos PostgreSQL queda dentro del mismo `docker compose` y no debe abrirse públicamente.
 
-> Si quieres todo en AWS, usa esta configuración de EC2 + Docker Compose. El servicio de Render ya no es necesario para este despliegue local en EC2.
+## Modo local y dev con perfiles Spring
+- `local`: corre tu app directamente en tu máquina con `application-local.properties`.
+- `dev`: corre tu app en Docker Compose con `application-dev.properties`.
+
+### Ejecutar local
+```bash
+./mvnw spring-boot:run -Dspring-boot.run.profiles=local
+```
+
+### Ejecutar en Docker Compose (dev)
+```bash
+docker compose up -d
+```
+
+El archivo `docker-compose.yml` activa automáticamente el perfil `dev` para el contenedor de la app.
 
 ## Docker Compose para EC2
 Se agrega un `docker-compose.yml` que levanta la aplicación Spring Boot junto a PostgreSQL en la misma EC2. Para cambiar credenciales, actualiza el archivo `.env` local y vuelve a recrear los servicios con `docker compose up -d`.
