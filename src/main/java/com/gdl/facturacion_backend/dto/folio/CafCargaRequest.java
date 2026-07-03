@@ -1,6 +1,5 @@
 package com.gdl.facturacion_backend.dto.folio;
 
-import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
 import lombok.Data;
@@ -26,6 +25,5 @@ public class CafCargaRequest {
 
     private LocalDate fechaVencimiento;
 
-    @NotBlank(message = "El XML del CAF es obligatorio")
     private String cafXml;
 }

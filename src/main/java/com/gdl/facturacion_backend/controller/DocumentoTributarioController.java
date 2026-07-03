@@ -65,6 +65,14 @@ public class DocumentoTributarioController {
     }
 
     // ver documento con su detalle, referencias y guía
+    @GetMapping("/estadisticas/emisores")
+    public List<DocumentoEmisorStatsResponse> estadisticasPorEmisor(
+            @RequestParam(required = false) Integer tipo,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate desde,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate hasta) {
+        return service.estadisticasPorEmisor(tipo, desde, hasta);
+    }
+
     @GetMapping("/{id}")
     public DocumentoDetailResponse obtener(@PathVariable Long id) {
         return DocumentoDetailResponse.from(service.obtenerDetalle(id));
@@ -129,10 +137,23 @@ public class DocumentoTributarioController {
                 "documento-" + id + ".pdf");
     }
 
+    @GetMapping("/{id}/factura")
+    public ResponseEntity<byte[]> descargarFactura(@PathVariable Long id) {
+        return descarga(exportService.generarPdf(id), MediaType.APPLICATION_PDF,
+                "factura-" + id + ".pdf");
+    }
+
     @GetMapping("/{id}/xml")
     public ResponseEntity<byte[]> descargarXml(@PathVariable Long id) {
         return descarga(exportService.generarXml(id), MediaType.APPLICATION_XML,
                 "documento-" + id + ".xml");
+    }
+
+    @GetMapping("/{id}/txt")
+    public ResponseEntity<byte[]> descargarTxt(@PathVariable Long id) {
+        return descarga(exportService.generarTxt(id),
+                new MediaType("text", "plain", StandardCharsets.UTF_8),
+                "documento-" + id + ".txt");
     }
 
     private ResponseEntity<byte[]> descarga(byte[] contenido, MediaType tipo, String nombreArchivo) {

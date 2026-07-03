@@ -24,6 +24,11 @@ public class DocumentoResponse {
     BigDecimal tipoCambio;
     String estado;
     String estadoSii;
+    Long usuarioEmisorId;
+    String usuarioEmisor;
+    Long emitidoPorId;
+    String emitidoPor;
+    String nombreUsuarioEmisor;
     BigDecimal montoNeto;
     BigDecimal montoIva;
     BigDecimal montoTotal;
@@ -34,6 +39,11 @@ public class DocumentoResponse {
 
     public static DocumentoResponse from(DocumentoTributarioEntity e) {
         ClienteEntity cliente = e.getCliente();
+        Long usuarioId = e.getUsuarioEmisor() != null ? e.getUsuarioEmisor().getId() : null;
+        String usuarioNombre = e.getUsuarioEmisor() != null
+                ? e.getUsuarioEmisor().getUsername()
+                : e.getNombreUsuarioEmisor();
+
         return new DocumentoResponse(
                 e.getId(),
                 e.getTipoDocumento() != null ? e.getTipoDocumento().getCodigoSii() : null,
@@ -49,6 +59,11 @@ public class DocumentoResponse {
                 e.getTipoCambio(),
                 e.getEstado() != null ? e.getEstado().name() : null,
                 e.getEstadoSii() != null ? e.getEstadoSii().name() : null,
+                usuarioId,
+                usuarioNombre,
+                usuarioId,
+                usuarioNombre,
+                usuarioNombre,
                 e.getMontoNeto(),
                 e.getMontoIva(),
                 e.getMontoTotal(),

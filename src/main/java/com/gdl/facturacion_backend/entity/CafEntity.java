@@ -27,7 +27,7 @@ public class CafEntity extends BaseModelEntity {
     @Column(name = "fecha_autorizacion")
     private LocalDate fechaAutorizacion;
 
-    @Column(name = "fecha_vencimiento")
+    @Column(name = "fecha_vencimiento", nullable = true)
     private LocalDate fechaVencimiento;
 
     @Column(name = "caf_xml", columnDefinition = "TEXT")

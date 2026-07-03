@@ -1,6 +1,7 @@
 package com.gdl.facturacion_backend.service;
 
 import com.gdl.facturacion_backend.dto.documento.DetalleCreateRequest;
+import com.gdl.facturacion_backend.dto.documento.DocumentoEmisorStatsResponse;
 import com.gdl.facturacion_backend.dto.documento.DocumentoCreateRequest;
 import com.gdl.facturacion_backend.dto.documento.DocumentoUpdateRequest;
 import com.gdl.facturacion_backend.dto.documento.GuiaDespachoRequest;
@@ -16,9 +17,13 @@ import com.gdl.facturacion_backend.repository.EmpresaRepository;
 import com.gdl.facturacion_backend.repository.GuiaDespachoExtraRepository;
 import com.gdl.facturacion_backend.repository.ProductoRepository;
 import com.gdl.facturacion_backend.repository.ReferenciaDocumentoRepository;
+import com.gdl.facturacion_backend.repository.AuditoriaRepository;
+import com.gdl.facturacion_backend.repository.UsuarioRepository;
 import com.gdl.facturacion_backend.service.documento.CalculoMontosService;
 import com.gdl.facturacion_backend.service.documento.ReglaTributariaResolver;
 import com.gdl.facturacion_backend.service.documento.regla.ReglaTributaria;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -46,6 +51,8 @@ public class DocumentoTributarioService extends BaseTenantService<DocumentoTribu
     private final ReglaTributariaResolver reglaResolver;
     private final FolioService folioService;
     private final EmpresaRepository empresaRepository;
+    private final UsuarioRepository usuarioRepository;
+    private final AuditoriaRepository auditoriaRepository;
 
     public DocumentoTributarioService(DocumentoTributarioRepository documentoRepository,
                                       TenantService tenantService,
@@ -57,7 +64,9 @@ public class DocumentoTributarioService extends BaseTenantService<DocumentoTribu
                                       CalculoMontosService calculoMontosService,
                                       ReglaTributariaResolver reglaResolver,
                                       FolioService folioService,
-                                      EmpresaRepository empresaRepository) {
+                                      EmpresaRepository empresaRepository,
+                                      UsuarioRepository usuarioRepository,
+                                      AuditoriaRepository auditoriaRepository) {
         super(documentoRepository, tenantService);
         this.documentoRepository = documentoRepository;
         this.tipoDocumentoService = tipoDocumentoService;
@@ -69,6 +78,8 @@ public class DocumentoTributarioService extends BaseTenantService<DocumentoTribu
         this.reglaResolver = reglaResolver;
         this.folioService = folioService;
         this.empresaRepository = empresaRepository;
+        this.usuarioRepository = usuarioRepository;
+        this.auditoriaRepository = auditoriaRepository;
     }
 
     /** Crea el documento base en estado BORRADOR. No asigna folio ni calcula montos. */
@@ -117,14 +128,30 @@ public class DocumentoTributarioService extends BaseTenantService<DocumentoTribu
 
     public List<DocumentoTributarioEntity> consultar(Long clienteId, Integer codigoTipo,
                                                      String estado, LocalDate desde, LocalDate hasta) {
-        return documentoRepository.buscar(getEmpresaId(), clienteId, codigoTipo,
+        List<DocumentoTributarioEntity> documentos = documentoRepository.buscar(getEmpresaId(), clienteId, codigoTipo,
                 parseEstado(estado), desde, hasta);
+        completarUsuariosEmisoresDesdeAuditoria(documentos);
+        return documentos;
+    }
+
+    public List<DocumentoEmisorStatsResponse> estadisticasPorEmisor(Integer codigoTipo,
+                                                                    LocalDate desde,
+                                                                    LocalDate hasta) {
+        return documentoRepository.estadisticasPorEmisor(getEmpresaId(), codigoTipo, desde, hasta).stream()
+                .map(row -> new DocumentoEmisorStatsResponse(
+                        (Long) row[0],
+                        (String) row[1],
+                        ((Number) row[2]).longValue(),
+                        row[3] instanceof BigDecimal total ? total : BigDecimal.ZERO
+                ))
+                .toList();
     }
 
     @Transactional(readOnly = true)
     public DocumentoTributarioEntity obtenerDetalle(Long id) {
         DocumentoTributarioEntity documento = cargar(id);
         precargar(documento);
+        completarUsuarioEmisorDesdeAuditoria(documento);
         return documento;
     }
 
@@ -249,6 +276,11 @@ public class DocumentoTributarioService extends BaseTenantService<DocumentoTribu
         documento.setFolio(folio);
         documento.setEstado(EstadoDocumento.EMITIDO);
         documento.setFechaEmision(LocalDate.now());
+        documento.setNombreUsuarioEmisor(nombreUsuarioActual());
+        usuarioActual().ifPresent(usuario -> {
+            documento.setUsuarioEmisor(usuario);
+            documento.setNombreUsuarioEmisor(usuario.getUsername());
+        });
 
         DocumentoTributarioEntity guardado = save(documento);
         precargar(guardado);
@@ -319,5 +351,52 @@ public class DocumentoTributarioService extends BaseTenantService<DocumentoTribu
         documento.setEmailContabilidadEmisor(empresa.getEmailContabilidad());
         documento.setRutRepresentanteEmisor(empresa.getRutRepresentante());
         documento.setNombreRepresentanteEmisor(empresa.getNombreRepresentante());
+    }
+
+    private void completarUsuariosEmisoresDesdeAuditoria(List<DocumentoTributarioEntity> documentos) {
+        documentos.stream()
+                .filter(documento -> documento.getUsuarioEmisor() == null)
+                .filter(documento -> documento.getId() != null)
+                .filter(documento -> documento.getEstado() == EstadoDocumento.EMITIDO)
+                .forEach(this::completarUsuarioEmisorDesdeAuditoria);
+    }
+
+    private void completarUsuarioEmisorDesdeAuditoria(DocumentoTributarioEntity documento) {
+        if (documento.getUsuarioEmisor() != null
+                || documento.getId() == null
+                || documento.getEstado() != EstadoDocumento.EMITIDO) {
+            return;
+        }
+
+        auditoriaRepository
+                .findFirstByTablaAndAccionAndDetalleOrderByFechaDesc(
+                        "DocumentoTributario",
+                        "emitir",
+                        "id=" + documento.getId())
+                .filter(auditoria -> auditoria.getUsuarioId() != null)
+                .flatMap(auditoria -> usuarioRepository.findById(auditoria.getUsuarioId()))
+                .ifPresent(usuario -> {
+                    documento.setUsuarioEmisor(usuario);
+                    documento.setNombreUsuarioEmisor(usuario.getUsername());
+                });
+    }
+
+    private java.util.Optional<UsuarioEntity> usuarioActual() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth == null || !auth.isAuthenticated()
+                || auth.getName() == null || auth.getName().isBlank()
+                || "anonymousUser".equals(auth.getName())) {
+            return java.util.Optional.empty();
+        }
+        return usuarioRepository.findByUsername(auth.getName());
+    }
+
+    private String nombreUsuarioActual() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth == null || auth.getName() == null || auth.getName().isBlank()
+                || "anonymousUser".equals(auth.getName())) {
+            return null;
+        }
+        return auth.getName();
     }
 }
