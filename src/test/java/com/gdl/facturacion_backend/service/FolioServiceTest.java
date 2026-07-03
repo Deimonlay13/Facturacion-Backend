@@ -1,5 +1,32 @@
 package com.gdl.facturacion_backend.service;
 
+import java.time.LocalDate;
+import java.util.List;
+import java.util.Optional;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.eq;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import static org.mockito.Mockito.lenient;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
+import static org.mockito.Mockito.when;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+
 import com.gdl.facturacion_backend.dto.folio.CafCargaRequest;
 import com.gdl.facturacion_backend.dto.folio.CafResponse;
 import com.gdl.facturacion_backend.entity.CafEntity;
@@ -13,33 +40,6 @@ import com.gdl.facturacion_backend.exception.ReglaNegocioException;
 import com.gdl.facturacion_backend.repository.CafRepository;
 import com.gdl.facturacion_backend.repository.ControlFolioRepository;
 import com.gdl.facturacion_backend.repository.FolioRepository;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.ArgumentCaptor;
-import org.mockito.InjectMocks;
-import org.mockito.Mock;
-import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageImpl;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
-
-import java.time.LocalDate;
-import java.util.List;
-import java.util.Optional;
-
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyLong;
-import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.lenient;
-import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.times;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.verifyNoInteractions;
-import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 class FolioServiceTest {
@@ -386,22 +386,17 @@ class FolioServiceTest {
                 .thenReturn(Optional.of(control));
         when(folioRepository.findFirstByCafIdAndEmpresaIdAndEstadoOrderByNumeroAsc(
                 100L, EMPRESA_ID, EstadoFolio.DISPONIBLE)).thenReturn(Optional.of(folio));
-        // Todavía quedan folios disponibles -> el CAF no se marca agotado
         when(folioRepository.countByCafIdAndEmpresaIdAndEstado(100L, EMPRESA_ID, EstadoFolio.DISPONIBLE))
                 .thenReturn(4L);
 
         Integer numero = folioService.asignarSiguienteFolio(CODIGO_TIPO);
 
         assertThat(numero).isEqualTo(1);
-        // El folio termina en estado UTILIZADO
         assertThat(folio.getEstado()).isEqualTo(EstadoFolio.UTILIZADO);
-        // Se guarda el folio dos veces (RESERVADO y luego UTILIZADO)
         verify(folioRepository, times(2)).save(folio);
-        // Se actualiza el control con último folio y fecha de hoy
         assertThat(control.getUltimoFolioUtilizado()).isEqualTo(1);
         assertThat(control.getUltimaFechaEmision()).isEqualTo(LocalDate.now());
         verify(controlFolioRepository).save(control);
-        // El CAF no se marca agotado porque quedan folios
         verify(cafRepository, never()).save(any(CafEntity.class));
         assertThat(caf.getEstado()).isEqualTo(EstadoCaf.DISPONIBLE);
     }
@@ -427,7 +422,6 @@ class FolioServiceTest {
                 .thenReturn(Optional.of(control));
         when(folioRepository.findFirstByCafIdAndEmpresaIdAndEstadoOrderByNumeroAsc(
                 110L, EMPRESA_ID, EstadoFolio.DISPONIBLE)).thenReturn(Optional.of(folio));
-        // Ya no quedan folios disponibles -> el CAF se marca agotado
         when(folioRepository.countByCafIdAndEmpresaIdAndEstado(110L, EMPRESA_ID, EstadoFolio.DISPONIBLE))
                 .thenReturn(0L);
 
@@ -463,7 +457,6 @@ class FolioServiceTest {
         Integer numero = folioService.asignarSiguienteFolio(CODIGO_TIPO);
 
         assertThat(numero).isEqualTo(50);
-        // El CAF ya estaba agotado: marcarCafAgotado retorna sin consultar disponibilidad ni guardar
         assertThat(caf.getEstado()).isEqualTo(EstadoCaf.AGOTADO);
         verify(cafRepository, never()).save(any(CafEntity.class));
         verify(folioRepository, never()).countByCafIdAndEmpresaIdAndEstado(anyLong(), anyLong(), any());
@@ -476,7 +469,7 @@ class FolioServiceTest {
 
         assertThatThrownBy(() -> folioService.asignarSiguienteFolio(CODIGO_TIPO))
                 .isInstanceOf(ReglaNegocioException.class)
-                .hasMessage("No hay CAF cargado para el tipo " + CODIGO_TIPO);
+                .hasMessage("No hay folios cargados para el tipo " + CODIGO_TIPO);
 
         verify(folioRepository, never()).save(any());
     }
@@ -493,7 +486,7 @@ class FolioServiceTest {
 
         assertThatThrownBy(() -> folioService.asignarSiguienteFolio(CODIGO_TIPO))
                 .isInstanceOf(ReglaNegocioException.class)
-                .hasMessage("No hay CAF activo para el tipo " + CODIGO_TIPO);
+                .hasMessage("No hay folios disponibles para el tipo " + CODIGO_TIPO);
 
         verify(folioRepository, never()).findFirstByCafIdAndEmpresaIdAndEstadoOrderByNumeroAsc(
                 anyLong(), anyLong(), any());
@@ -515,15 +508,15 @@ class FolioServiceTest {
                 .thenReturn(Optional.of(control));
         when(folioRepository.findFirstByCafIdAndEmpresaIdAndEstadoOrderByNumeroAsc(
                 130L, EMPRESA_ID, EstadoFolio.DISPONIBLE)).thenReturn(Optional.empty());
-        // marcarCafAgotado se invoca dentro del orElseThrow: no quedan folios
         when(folioRepository.countByCafIdAndEmpresaIdAndEstado(130L, EMPRESA_ID, EstadoFolio.DISPONIBLE))
                 .thenReturn(0L);
 
         assertThatThrownBy(() -> folioService.asignarSiguienteFolio(CODIGO_TIPO))
                 .isInstanceOf(ReglaNegocioException.class)
-                .hasMessage("No hay folios disponibles para el tipo " + CODIGO_TIPO);
+                .hasMessage("No hay folios disponibles para el tipo "
+                        + CODIGO_TIPO
+                        + ". Cargue nuevos folios antes de facturar.");
 
-        // Al no haber folios, el CAF activo se marca agotado
         assertThat(caf.getEstado()).isEqualTo(EstadoCaf.AGOTADO);
         verify(cafRepository).save(caf);
         verify(folioRepository, never()).save(any());
@@ -532,7 +525,6 @@ class FolioServiceTest {
 
     @Test
     void getEmpresaId_seResuelveDesdeTenantContext() {
-        // Verifica explícitamente que el servicio obtiene la empresa del tenantService
         when(folioRepository.findAllByEmpresaId(EMPRESA_ID)).thenReturn(List.of());
 
         folioService.listarFolios();
