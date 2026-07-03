@@ -30,6 +30,7 @@ import javax.xml.transform.stream.StreamResult;
 import java.io.ByteArrayOutputStream;
 import java.math.BigDecimal;
 import java.awt.Color;
+import java.nio.charset.StandardCharsets;
 import java.text.NumberFormat;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
@@ -46,13 +47,16 @@ public class DocumentoExportService {
     private final DocumentoTributarioService documentoService;
     private final EmpresaRepository empresaRepository;
     private final TenantService tenantService;
+    private final com.gdl.facturacion_backend.service.ArchivoService archivoService;
 
     public DocumentoExportService(DocumentoTributarioService documentoService,
                                   EmpresaRepository empresaRepository,
-                                  TenantService tenantService) {
+                                  TenantService tenantService,
+                                  com.gdl.facturacion_backend.service.ArchivoService archivoService) {
         this.documentoService = documentoService;
         this.empresaRepository = empresaRepository;
         this.tenantService = tenantService;
+        this.archivoService = archivoService;
     }
 
     // ============================================================== XML
@@ -127,7 +131,16 @@ public class DocumentoExportService {
 
             ByteArrayOutputStream out = new ByteArrayOutputStream();
             transformer.transform(new DOMSource(xml), new StreamResult(out));
-            return out.toByteArray();
+            byte[] xmlBytes = out.toByteArray();
+            
+            // Guardar XML en tabla archivos
+            try {
+                archivoService.guardarXml(id, xmlBytes);
+            } catch (Exception e) {
+                System.err.println("Advertencia: No se pudo guardar el XML: " + e.getMessage());
+            }
+            
+            return xmlBytes;
         } catch (Exception e) {
             throw new RuntimeException("No se pudo generar el XML del documento: " + e.getMessage(), e);
         }
@@ -136,7 +149,66 @@ public class DocumentoExportService {
     // ============================================================== PDF
     public byte[] generarPdf(Long id) {
         DocumentoTributarioEntity doc = documentoService.obtenerDetalle(id);
-        return DocumentoPdfGenerator.generar(doc, emisor());
+        byte[] pdfBytes = DocumentoPdfGenerator.generar(doc, emisor());
+        
+        // Guardar PDF en tabla archivos
+        try {
+            archivoService.guardarPdf(id, pdfBytes);
+        } catch (Exception e) {
+            System.err.println("Advertencia: No se pudo guardar el PDF: " + e.getMessage());
+        }
+        
+        return pdfBytes;
+    }
+
+    // ============================================================== TXT
+    public byte[] generarTxt(Long id) {
+        DocumentoTributarioEntity doc = documentoService.obtenerDetalle(id);
+        StringBuilder txt = new StringBuilder();
+
+        Integer codigoTipo = doc.getTipoDocumento() != null ? doc.getTipoDocumento().getCodigoSii() : null;
+        ClienteEntity cliente = doc.getCliente();
+        String numeroDocumento = prefijoDocumento(codigoTipo)
+                + (doc.getFolio() != null ? doc.getFolio() : doc.getId());
+
+        txt.append("|CLIENTE|")
+                .append(valor(codigoTipo))
+                .append('|').append(campo(numeroDocumento))
+                .append('|').append(campo(valor(doc.getRut(), cliente != null ? cliente.getRut() : null)))
+                .append('|').append(campo(valor(doc.getRazonSocial(), cliente != null ? cliente.getRazonSocial() : null)))
+                .append('|').append(campo(valor(doc.getDireccion(), cliente != null ? cliente.getDireccion() : null)))
+                .append('|').append(campo(valor(doc.getPais(), cliente != null ? cliente.getPais() : null)))
+                .append('|')
+                .append('|').append(campo(valor(doc.getCiudad(), cliente != null ? cliente.getCiudad() : null)))
+                .append('|').append(campo(cliente != null ? cliente.getTelefono() : null))
+                .append('|').append('\n');
+
+        txt.append("|CABECERA|")
+                .append(fechaTxt(doc.getFechaEmision()))
+                .append('|').append(fechaTxt(doc.getFechaVencimiento()))
+                .append('|')
+                .append('|').append(numeroTxt(doc.getTipoCambio()))
+                .append('|').append('\n');
+
+        txt.append("|OBSERVACION|")
+                .append(campo(doc.getObservaciones()))
+                .append("|||||").append('\n');
+
+        List<DetalleDocumentoEntity> detalles = doc.getDetalles() != null ? doc.getDetalles() : List.of();
+        int linea = 1;
+        for (DetalleDocumentoEntity detalle : detalles) {
+            String codigoProducto = detalle.getProducto() != null ? detalle.getProducto().getCodigo() : "";
+            txt.append("|DETALLE|")
+                    .append(linea++)
+                    .append("|||")
+                    .append(campo(codigoProducto))
+                    .append('|').append(campo(detalle.getDescripcionItem()))
+                    .append('|').append(numeroTxt(detalle.getCantidad()))
+                    .append('|').append(numeroTxt(detalle.getPrecioUnitario()))
+                    .append('|').append('\n');
+        }
+
+        return txt.toString().getBytes(StandardCharsets.UTF_8);
     }
 
     @SuppressWarnings("unused")
@@ -401,9 +473,17 @@ public class DocumentoExportService {
         return value != null ? value.format(DateTimeFormatter.ofPattern("dd-MM-yyyy")) : "";
     }
 
+    private String fechaTxt(LocalDate value) {
+        return value != null ? value.format(DateTimeFormatter.ofPattern("dd-MM-yyyy")) : "";
+    }
+
     private String numero(BigDecimal value) {
         if (value == null) return "";
         return value.stripTrailingZeros().toPlainString();
+    }
+
+    private String numeroTxt(BigDecimal value) {
+        return value != null ? value.stripTrailingZeros().toPlainString() : "";
     }
 
     private String monto(BigDecimal value) {
@@ -472,6 +552,39 @@ public class DocumentoExportService {
     private String val(String preferido, String fallback) {
         if (preferido != null && !preferido.isBlank()) return preferido;
         return fallback != null ? fallback : "";
+    }
+
+    private String valor(String value) {
+        return value != null ? value : "";
+    }
+
+    private String valor(Integer value) {
+        return value != null ? value.toString() : "";
+    }
+
+    private String valor(String preferido, String fallback) {
+        return preferido != null && !preferido.isBlank()
+                ? preferido
+                : fallback != null ? fallback : "";
+    }
+
+    private String campo(String value) {
+        return value != null
+                ? value.replace('|', ' ').replace('\r', ' ').replace('\n', ' ').trim()
+                : "";
+    }
+
+    private String prefijoDocumento(Integer codigoTipo) {
+        if (codigoTipo == null) {
+            return "D";
+        }
+        return switch (codigoTipo) {
+            case 33 -> "FA";
+            case 34 -> "FE";
+            case 56 -> "ND";
+            case 61 -> "NC";
+            default -> "D" + codigoTipo + "-";
+        };
     }
 
     private String str(Object value) {

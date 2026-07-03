@@ -114,6 +114,13 @@ public class DocumentoTributarioEntity extends BaseModelEntity {
     @Column(name = "estado_sii")
     private EstadoDocumentoSii estadoSii;
 
+    @ManyToOne
+    @JoinColumn(name = "id_usuario_emisor")
+    private UsuarioEntity usuarioEmisor;
+
+    @Column(name = "nombre_usuario_emisor")
+    private String nombreUsuarioEmisor;
+
     @Column(name = "xml_firmado")
     private Boolean xmlFirmado;
 

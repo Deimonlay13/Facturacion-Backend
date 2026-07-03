@@ -59,7 +59,7 @@ public class UsuarioService {
 
         usuarioRepository.save(usuario);
 
-        String token = jwtService.generateToken(usuario.getUsername(), empresaId, role.getNombre());
+        String token = jwtService.generateToken(usuario.getUsername(), empresaId, normalizarRol(role.getNombre()));
         return new AuthResponse(token, refreshTokenService.crear(usuario));
     }
 
@@ -73,7 +73,7 @@ public class UsuarioService {
 
         Long empresaId = usuario.getEmpresa() != null ? usuario.getEmpresa().getId() : null;
 
-        String token = jwtService.generateToken(usuario.getUsername(), empresaId, usuario.getRol().getNombre());
+        String token = jwtService.generateToken(usuario.getUsername(), empresaId, normalizarRol(usuario.getRol().getNombre()));
         return new AuthResponse(token, refreshTokenService.crear(usuario));
     }
 
@@ -164,5 +164,18 @@ public class UsuarioService {
                     "Operación no permitida: falta identificación de empresa (X-Tenant-ID o JWT)");
         }
         return empresaId;
+    }
+
+    private String normalizarRol(String rol) {
+        if (rol == null) {
+            return ROL_USER;
+        }
+
+        return switch (rol.trim().toUpperCase()) {
+            case "SUPER_ADMIN", "ADMIN_ROOT", "ROOT", ROL_SUPER_ADMIN -> ROL_SUPER_ADMIN;
+            case "ADMIN", ROL_ADMIN -> ROL_ADMIN;
+            case "USER", ROL_USER -> ROL_USER;
+            default -> rol;
+        };
     }
 }

@@ -42,6 +42,7 @@ public class ImportacionTxtService {
     private final CalculoMontosService calculoMontosService;
     private final ReglaTributariaResolver reglaResolver;
     private final TenantService tenantService;
+    private final com.gdl.facturacion_backend.service.ArchivoService archivoService;
 
     public ImportacionTxtService(TxtFacturaParser parser,
                                  ClienteRepository clienteRepository,
@@ -49,7 +50,8 @@ public class ImportacionTxtService {
                                  DocumentoTributarioRepository documentoRepository,
                                  CalculoMontosService calculoMontosService,
                                  ReglaTributariaResolver reglaResolver,
-                                 TenantService tenantService) {
+                                 TenantService tenantService,
+                                 com.gdl.facturacion_backend.service.ArchivoService archivoService) {
         this.parser = parser;
         this.clienteRepository = clienteRepository;
         this.tipoDocumentoService = tipoDocumentoService;
@@ -57,6 +59,7 @@ public class ImportacionTxtService {
         this.calculoMontosService = calculoMontosService;
         this.reglaResolver = reglaResolver;
         this.tenantService = tenantService;
+        this.archivoService = archivoService;
     }
 
     public ImportTxtPreviewResponse previsualizar(String contenido) {
@@ -154,7 +157,17 @@ public class ImportacionTxtService {
             documento.setMontoIva(java.math.BigDecimal.ZERO);
             documento.setMontoTotal(documento.getMontoNeto());
         }
-        return documentoRepository.save(documento);
+        DocumentoTributarioEntity documentoGuardado = documentoRepository.save(documento);
+        
+        // Guardar el TXT original como archivo
+        try {
+            archivoService.guardarTxt(documentoGuardado.getId(), contenido);
+        } catch (Exception e) {
+            // Log pero no falla la importación si no se puede guardar el archivo
+            System.err.println("Advertencia: No se pudo guardar el TXT: " + e.getMessage());
+        }
+        
+        return documentoGuardado;
     }
 
     // ------------------------------------------------------------- helpers
