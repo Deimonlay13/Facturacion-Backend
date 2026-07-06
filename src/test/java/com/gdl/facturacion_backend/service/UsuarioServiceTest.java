@@ -22,6 +22,10 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
 import java.util.List;
@@ -73,6 +77,7 @@ class UsuarioServiceTest {
     @AfterEach
     void tearDown() {
         TenantContext.clear();
+        SecurityContextHolder.clearContext();
     }
 
     // ------------------------------------------------------------------
@@ -96,6 +101,12 @@ class UsuarioServiceTest {
         u.setId(id);
         u.setUsername(username);
         return u;
+    }
+
+    private void autenticarComoSuperAdmin() {
+        Authentication auth = new UsernamePasswordAuthenticationToken(
+                "root", null, List.of(new SimpleGrantedAuthority(ROL_SUPER_ADMIN)));
+        SecurityContextHolder.getContext().setAuthentication(auth);
     }
 
     private RegisterRequest registerRequest(String username, String password) {
@@ -336,6 +347,21 @@ class UsuarioServiceTest {
         verifyNoInteractions(usuarioRepository);
     }
 
+    @Test
+    void listar_comoSuperAdmin_devuelveTodosLosUsuariosSinFiltrarPorEmpresa() {
+        TenantContext.clear(); // el super admin no lleva empresa en el token
+        autenticarComoSuperAdmin();
+        UsuarioEntity u1 = usuario(1L, "a");
+        UsuarioEntity u2 = usuario(2L, "b");
+        when(usuarioRepository.findAll()).thenReturn(List.of(u1, u2));
+
+        List<UsuarioEntity> resultado = usuarioService.listar();
+
+        assertThat(resultado).containsExactly(u1, u2);
+        verify(usuarioRepository).findAll();
+        verify(usuarioRepository, never()).findAllByEmpresaId(any());
+    }
+
     // ------------------------------------------------------------------
     // obtenerPorId
     // ------------------------------------------------------------------
@@ -358,6 +384,20 @@ class UsuarioServiceTest {
         assertThatThrownBy(() -> usuarioService.obtenerPorId(99L))
                 .isInstanceOf(RecursoNoEncontradoException.class)
                 .hasMessage("Usuario no encontrado con id: 99");
+    }
+
+    @Test
+    void obtenerPorId_comoSuperAdmin_buscaSinFiltroDeEmpresa() {
+        TenantContext.clear();
+        autenticarComoSuperAdmin();
+        UsuarioEntity usuario = usuario(5L, "juan");
+        when(usuarioRepository.findById(5L)).thenReturn(Optional.of(usuario));
+
+        UsuarioEntity resultado = usuarioService.obtenerPorId(5L);
+
+        assertThat(resultado).isSameAs(usuario);
+        verify(usuarioRepository).findById(5L);
+        verify(usuarioRepository, never()).findByIdAndEmpresaId(any(), any());
     }
 
     // ------------------------------------------------------------------

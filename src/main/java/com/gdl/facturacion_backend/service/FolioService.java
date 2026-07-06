@@ -88,16 +88,23 @@ public class FolioService extends BaseTenantService<ControlFolioEntity> {
     }
 
     public List<FolioEntity> listarFolios() {
-        return folioRepository.findAllByEmpresaId(getEmpresaId());
+        return vistaGlobal()
+                ? folioRepository.findAll()
+                : folioRepository.findAllByEmpresaId(getEmpresaId());
     }
 
     public org.springframework.data.domain.Page<FolioEntity> listarFoliosPaginado(
             org.springframework.data.domain.Pageable pageable) {
-        return folioRepository.findByEmpresaId(getEmpresaId(), pageable);
+        return vistaGlobal()
+                ? folioRepository.findAll(pageable)
+                : folioRepository.findByEmpresaId(getEmpresaId(), pageable);
     }
 
     public List<CafResponse> listarCafs() {
-        return cafRepository.findAllByEmpresaId(getEmpresaId()).stream()
+        List<CafEntity> cafs = vistaGlobal()
+                ? cafRepository.findAll()
+                : cafRepository.findAllByEmpresaId(getEmpresaId());
+        return cafs.stream()
                 .map(this::toCafResponse)
                 .toList();
     }
@@ -214,7 +221,9 @@ public class FolioService extends BaseTenantService<ControlFolioEntity> {
     }
 
     private CafResponse toCafResponse(CafEntity caf) {
-        Long empresaId = getEmpresaId();
+        // Usa la empresa propia del CAF (para un usuario normal coincide con su tenant;
+        // para un SUPER_ADMIN que ve CAFs de todas las empresas, cuenta cada uno correctamente).
+        Long empresaId = caf.getEmpresa() != null ? caf.getEmpresa().getId() : getEmpresaId();
         long generados = folioRepository.countByCafIdAndEmpresaId(caf.getId(), empresaId);
         long disponibles = folioRepository.countByCafIdAndEmpresaIdAndEstado(
                 caf.getId(), empresaId, EstadoFolio.DISPONIBLE);

@@ -13,6 +13,7 @@ import com.gdl.facturacion_backend.exception.CredencialesInvalidasException;
 import com.gdl.facturacion_backend.exception.RecursoNoEncontradoException;
 import com.gdl.facturacion_backend.exception.ReglaNegocioException;
 import com.gdl.facturacion_backend.repository.UsuarioRepository;
+import com.gdl.facturacion_backend.security.SecurityUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -82,11 +83,15 @@ public class UsuarioService {
     // ---------------------------------------------------------------------
 
     public List<UsuarioEntity> listar() {
-        return usuarioRepository.findAllByEmpresaId(empresaIdActual());
+        return SecurityUtils.esSuperAdminSinEmpresa()
+                ? usuarioRepository.findAll()
+                : usuarioRepository.findAllByEmpresaId(empresaIdActual());
     }
 
     public UsuarioEntity obtenerPorId(Long id) {
-        return usuarioRepository.findByIdAndEmpresaId(id, empresaIdActual())
+        return (SecurityUtils.esSuperAdminSinEmpresa()
+                ? usuarioRepository.findById(id)
+                : usuarioRepository.findByIdAndEmpresaId(id, empresaIdActual()))
                 .orElseThrow(() -> new RecursoNoEncontradoException("Usuario no encontrado con id: " + id));
     }
 
@@ -165,6 +170,7 @@ public class UsuarioService {
         }
         return empresaId;
     }
+
 
     private String normalizarRol(String rol) {
         if (rol == null) {

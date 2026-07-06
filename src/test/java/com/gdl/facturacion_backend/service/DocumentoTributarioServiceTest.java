@@ -19,6 +19,7 @@ import com.gdl.facturacion_backend.enums.Moneda;
 import com.gdl.facturacion_backend.enums.TipoTraslado;
 import com.gdl.facturacion_backend.exception.RecursoNoEncontradoException;
 import com.gdl.facturacion_backend.exception.ReglaNegocioException;
+import com.gdl.facturacion_backend.repository.AuditoriaRepository;
 import com.gdl.facturacion_backend.repository.DocumentoTributarioRepository;
 import com.gdl.facturacion_backend.repository.EmpresaRepository;
 import com.gdl.facturacion_backend.repository.GuiaDespachoExtraRepository;
@@ -27,6 +28,7 @@ import com.gdl.facturacion_backend.repository.ReferenciaDocumentoRepository;
 import com.gdl.facturacion_backend.service.documento.CalculoMontosService;
 import com.gdl.facturacion_backend.service.documento.ReglaTributariaResolver;
 import com.gdl.facturacion_backend.service.documento.regla.ReglaTributaria;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -34,6 +36,9 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.context.SecurityContextHolder;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -81,6 +86,8 @@ class DocumentoTributarioServiceTest {
     private FolioService folioService;
     @Mock
     private EmpresaRepository empresaRepository;
+    @Mock
+    private AuditoriaRepository auditoriaRepository;
 
     @InjectMocks
     private DocumentoTributarioService service;
@@ -90,6 +97,30 @@ class DocumentoTributarioServiceTest {
         // El servicio hereda getEmpresaId() de BaseTenantService -> tenantService.getEmpresaId().
         // lenient porque algunos tests cortan antes de tocar el tenant.
         lenient().when(tenantService.getEmpresaId()).thenReturn(EMPRESA_ID);
+    }
+
+    @AfterEach
+    void limpiarSecurityContext() {
+        SecurityContextHolder.clearContext();
+    }
+
+    private void autenticarComoSuperAdmin() {
+        SecurityContextHolder.getContext().setAuthentication(
+                new UsernamePasswordAuthenticationToken("root", null,
+                        List.of(new SimpleGrantedAuthority("ROLE_SUPER_ADMIN"))));
+    }
+
+    @Test
+    void consultar_comoSuperAdmin_pasaEmpresaIdNullYVeTodo() {
+        autenticarComoSuperAdmin();
+        DocumentoTributarioEntity doc = documento(1L, EstadoDocumento.EMITIDO, tipo(CODIGO_FACTURA));
+        when(documentoRepository.buscar(null, null, null, null, null, null))
+                .thenReturn(List.of(doc));
+
+        List<DocumentoTributarioEntity> resultado = service.consultar(null, null, null, null, null);
+
+        assertThat(resultado).containsExactly(doc);
+        verify(documentoRepository).buscar(null, null, null, null, null, null);
     }
 
     // ------------------------------------------------------------------ helpers

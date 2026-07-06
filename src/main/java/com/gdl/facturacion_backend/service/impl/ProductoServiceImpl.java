@@ -11,6 +11,7 @@ import com.gdl.facturacion_backend.entity.ProductoEntity;
 import com.gdl.facturacion_backend.exception.RecursoNoEncontradoException;
 import com.gdl.facturacion_backend.exception.ReglaNegocioException;
 import com.gdl.facturacion_backend.repository.ProductoRepository;
+import com.gdl.facturacion_backend.security.SecurityUtils;
 import com.gdl.facturacion_backend.service.ProductoService;
 import com.gdl.facturacion_backend.service.TenantService;
 
@@ -77,13 +78,17 @@ public class ProductoServiceImpl implements ProductoService {
 
     @Override
     public ProductoEntity findById(Long id) {
-        return repository.findByIdAndEmpresaId(id, getEmpresaId())
+        return (SecurityUtils.esSuperAdminSinEmpresa()
+                ? repository.findById(id)
+                : repository.findByIdAndEmpresaId(id, getEmpresaId()))
                 .orElseThrow(() -> new RecursoNoEncontradoException("Producto no encontrado"));
     }
 
     @Override
     public java.util.List<ProductoEntity> findAll() {
-        return repository.findAllByEmpresaId(getEmpresaId());
+        return SecurityUtils.esSuperAdminSinEmpresa()
+                ? repository.findAll()
+                : repository.findAllByEmpresaId(getEmpresaId());
     }
 
     @Override

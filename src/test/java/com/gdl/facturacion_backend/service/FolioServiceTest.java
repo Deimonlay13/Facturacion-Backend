@@ -6,6 +6,7 @@ import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -22,6 +23,9 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
@@ -77,6 +81,49 @@ class FolioServiceTest {
         tipo.setId(7L);
         tipo.setCodigoSii(CODIGO_TIPO);
         tipo.setDescripcion("Factura Electrónica");
+    }
+
+    @AfterEach
+    void limpiarSecurityContext() {
+        SecurityContextHolder.clearContext();
+    }
+
+    private void autenticarComoSuperAdmin() {
+        SecurityContextHolder.getContext().setAuthentication(
+                new UsernamePasswordAuthenticationToken("root", null,
+                        List.of(new SimpleGrantedAuthority("ROLE_SUPER_ADMIN"))));
+    }
+
+    @Test
+    void listarFolios_comoSuperAdmin_devuelveTodosSinFiltroEmpresa() {
+        autenticarComoSuperAdmin();
+        FolioEntity f1 = new FolioEntity();
+        f1.setId(1L);
+        FolioEntity f2 = new FolioEntity();
+        f2.setId(2L);
+        when(folioRepository.findAll()).thenReturn(List.of(f1, f2));
+
+        List<FolioEntity> resultado = folioService.listarFolios();
+
+        assertThat(resultado).containsExactly(f1, f2);
+        verify(folioRepository).findAll();
+        verify(folioRepository, never()).findAllByEmpresaId(any());
+    }
+
+    @Test
+    void listarFoliosPaginado_comoSuperAdmin_usaFindAllSinFiltro() {
+        autenticarComoSuperAdmin();
+        Pageable pageable = PageRequest.of(0, 15);
+        FolioEntity f = new FolioEntity();
+        f.setId(1L);
+        Page<FolioEntity> page = new PageImpl<>(List.of(f), pageable, 1);
+        when(folioRepository.findAll(pageable)).thenReturn(page);
+
+        Page<FolioEntity> resultado = folioService.listarFoliosPaginado(pageable);
+
+        assertThat(resultado.getContent()).containsExactly(f);
+        verify(folioRepository).findAll(pageable);
+        verify(folioRepository, never()).findByEmpresaId(any(), any());
     }
 
     private CafCargaRequest nuevaRequest(int desde, int hasta) {
