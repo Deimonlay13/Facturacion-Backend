@@ -14,14 +14,15 @@ public interface DocumentoTributarioRepository
         extends BaseTenantRepository<DocumentoTributarioEntity> {
 
     /**
-     * Consulta con filtros opcionales (null = ignorar). Siempre acotado a la empresa.
+     * Consulta con filtros opcionales (null = ignorar). empresaId null = todas las empresas
+     * (solo aplica a SUPER_ADMIN); en caso contrario queda acotado a la empresa indicada.
      */
     @Query("""
             SELECT DISTINCT d FROM DocumentoTributarioEntity d
             LEFT JOIN FETCH d.usuarioEmisor
             LEFT JOIN FETCH d.tipoDocumento
             LEFT JOIN FETCH d.cliente
-            WHERE d.empresa.id = :empresaId
+            WHERE (:empresaId IS NULL OR d.empresa.id = :empresaId)
               AND (:clienteId IS NULL OR d.cliente.id = :clienteId)
               AND (:codigoTipo IS NULL OR d.tipoDocumento.codigoSii = :codigoTipo)
               AND (:estado IS NULL OR d.estado = :estado)
@@ -40,7 +41,7 @@ public interface DocumentoTributarioRepository
             SELECT u.id, COALESCE(u.username, d.nombreUsuarioEmisor, 'Sin usuario'), COUNT(d), COALESCE(SUM(d.montoTotal), 0)
             FROM DocumentoTributarioEntity d
             LEFT JOIN d.usuarioEmisor u
-            WHERE d.empresa.id = :empresaId
+            WHERE (:empresaId IS NULL OR d.empresa.id = :empresaId)
               AND d.estado = com.gdl.facturacion_backend.enums.EstadoDocumento.EMITIDO
               AND (:codigoTipo IS NULL OR d.tipoDocumento.codigoSii = :codigoTipo)
               AND (:desde IS NULL OR d.fechaEmision >= :desde)

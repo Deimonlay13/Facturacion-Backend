@@ -128,16 +128,22 @@ public class DocumentoTributarioService extends BaseTenantService<DocumentoTribu
 
     public List<DocumentoTributarioEntity> consultar(Long clienteId, Integer codigoTipo,
                                                      String estado, LocalDate desde, LocalDate hasta) {
-        List<DocumentoTributarioEntity> documentos = documentoRepository.buscar(getEmpresaId(), clienteId, codigoTipo,
+        List<DocumentoTributarioEntity> documentos = documentoRepository.buscar(empresaIdConsulta(), clienteId, codigoTipo,
                 parseEstado(estado), desde, hasta);
         completarUsuariosEmisoresDesdeAuditoria(documentos);
         return documentos;
     }
 
+    /** empresaId a usar en consultas: null solo para un SUPER_ADMIN sin empresa seleccionada
+     *  (ve documentos de todas las empresas); si elige una, queda acotado a ella. */
+    private Long empresaIdConsulta() {
+        return vistaGlobal() ? null : getEmpresaId();
+    }
+
     public List<DocumentoEmisorStatsResponse> estadisticasPorEmisor(Integer codigoTipo,
                                                                     LocalDate desde,
                                                                     LocalDate hasta) {
-        return documentoRepository.estadisticasPorEmisor(getEmpresaId(), codigoTipo, desde, hasta).stream()
+        return documentoRepository.estadisticasPorEmisor(empresaIdConsulta(), codigoTipo, desde, hasta).stream()
                 .map(row -> new DocumentoEmisorStatsResponse(
                         (Long) row[0],
                         (String) row[1],

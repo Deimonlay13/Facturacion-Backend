@@ -9,6 +9,7 @@ import com.gdl.facturacion_backend.exception.RecursoNoEncontradoException;
 import com.gdl.facturacion_backend.exception.ReglaNegocioException;
 import com.gdl.facturacion_backend.exception.RutInvalidoException;
 import com.gdl.facturacion_backend.repository.ClienteRepository;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -17,6 +18,9 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.context.SecurityContextHolder;
 
 import java.util.List;
 import java.util.Optional;
@@ -62,6 +66,44 @@ class ClienteServiceTest {
         // El servicio resuelve la empresa vía tenantService.getEmpresaId().
         // lenient porque algunos tests (ej. RUT inválido) cortan antes de usarlo.
         lenient().when(tenantService.getEmpresaId()).thenReturn(EMPRESA_ID);
+    }
+
+    @AfterEach
+    void limpiarSecurityContext() {
+        SecurityContextHolder.clearContext();
+    }
+
+    private void autenticarComoSuperAdmin() {
+        SecurityContextHolder.getContext().setAuthentication(
+                new UsernamePasswordAuthenticationToken("root", null,
+                        List.of(new SimpleGrantedAuthority("ROLE_SUPER_ADMIN"))));
+    }
+
+    @Test
+    void listarActivos_comoSuperAdmin_devuelveDeTodasLasEmpresas() {
+        autenticarComoSuperAdmin();
+        ClienteEntity c1 = buildEntity(1L, RUT_VALIDO);
+        ClienteEntity c2 = buildEntity(2L, RUT_VALIDO_2);
+        when(clienteRepository.findAll()).thenReturn(List.of(c1, c2));
+
+        List<ClienteEntity> resultado = clienteService.listarActivos();
+
+        assertThat(resultado).containsExactly(c1, c2);
+        verify(clienteRepository).findAll();
+        verify(clienteRepository, never()).findAllByEmpresaId(any());
+    }
+
+    @Test
+    void obtenerPorId_comoSuperAdmin_buscaSinFiltroEmpresa() {
+        autenticarComoSuperAdmin();
+        ClienteEntity c = buildEntity(5L, RUT_VALIDO);
+        when(clienteRepository.findById(5L)).thenReturn(Optional.of(c));
+
+        ClienteEntity resultado = clienteService.obtenerPorId(5L);
+
+        assertThat(resultado).isSameAs(c);
+        verify(clienteRepository).findById(5L);
+        verify(clienteRepository, never()).findByIdAndEmpresaId(any(), any());
     }
 
     private ClienteCreateRequest buildRequest(String rut) {
