@@ -16,6 +16,7 @@ import static org.mockito.Mockito.when;
 import java.util.List;
 import java.util.Optional;
 
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -26,6 +27,9 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.context.SecurityContextHolder;
 
 import com.gdl.facturacion_backend.dto.ProductoRequest;
 import com.gdl.facturacion_backend.entity.ProductoEntity;
@@ -63,6 +67,45 @@ class ProductoServiceImplTest {
         request.setPrecio(1500.0);
         request.setAfectaIva(true);
         request.setActivo(true);
+    }
+
+    @AfterEach
+    void limpiarSecurityContext() {
+        SecurityContextHolder.clearContext();
+    }
+
+    private void autenticarComoSuperAdmin() {
+        SecurityContextHolder.getContext().setAuthentication(
+                new UsernamePasswordAuthenticationToken("root", null,
+                        List.of(new SimpleGrantedAuthority("ROLE_SUPER_ADMIN"))));
+    }
+
+    @Test
+    @DisplayName("findAll: SUPER_ADMIN ve productos de todas las empresas (sin filtro)")
+    void findAll_comoSuperAdmin_sinFiltroEmpresa() {
+        autenticarComoSuperAdmin();
+        List<ProductoEntity> lista = List.of(productoExistente(1L, "A"), productoExistente(2L, "B"));
+        when(repository.findAll()).thenReturn(lista);
+
+        List<ProductoEntity> resultado = service.findAll();
+
+        assertThat(resultado).containsExactlyElementsOf(lista);
+        verify(repository).findAll();
+        verify(repository, never()).findAllByEmpresaId(anyLong());
+    }
+
+    @Test
+    @DisplayName("findById: SUPER_ADMIN busca sin filtro de empresa")
+    void findById_comoSuperAdmin_sinFiltroEmpresa() {
+        autenticarComoSuperAdmin();
+        ProductoEntity p = productoExistente(7L, "P-007");
+        when(repository.findById(7L)).thenReturn(Optional.of(p));
+
+        ProductoEntity resultado = service.findById(7L);
+
+        assertThat(resultado).isSameAs(p);
+        verify(repository).findById(7L);
+        verify(repository, never()).findByIdAndEmpresaId(anyLong(), anyLong());
     }
 
     private ProductoEntity productoExistente(Long id, String codigo) {

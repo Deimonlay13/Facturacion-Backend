@@ -82,6 +82,17 @@ let TOKEN   = localStorage.getItem("pm_token")   || "";
 let USER    = localStorage.getItem("pm_user")    || "";
 let ROLE    = localStorage.getItem("pm_role")    || "";
 let REFRESH = localStorage.getItem("pm_refresh") || "";
+let TENANT  = localStorage.getItem("pm_tenant")  || ""; // empresa activa: se envía como X-Tenant-ID
+let EMPRESAS_CACHE = null;
+
+// Cabeceras de autenticación + empresa activa (tenant). El super_admin no tiene empresa propia,
+// así que al elegir una en el selector se manda X-Tenant-ID y opera dentro de esa empresa.
+function authHeaders(){
+  const h = {};
+  if (TOKEN)  h["Authorization"] = "Bearer " + TOKEN;
+  if (TENANT) h["X-Tenant-ID"]   = TENANT;
+  return h;
+}
 
 // Intenta renovar el access token usando el refresh token. Devuelve true si lo logró.
 async function tryRefresh(){
@@ -144,6 +155,10 @@ const MODELS = {
   control: { label:"Control de Folios", group:"Facturación", list:"/api/folios/control", readOnly:true },
   folios: { label:"Folios", group:"Facturación", list:"/api/folios",
     cols:["id","numero","tipo","estado"], readOnly:true, paged:true },
+  enviosSii: { label:"Envíos SII", group:"Facturación", list:"/api/documentos/sii/envios",
+    cols:["id","trackId","fechaEnvio","estado","intentos"], readOnly:true },
+  historialSii: { label:"Historial SII", group:"Facturación", list:"/api/documentos/sii/historial",
+    cols:["id","documentoId","folio","estado","fechaEstado","mensaje"], readOnly:true },
   auditoria: { label:"Auditoría", group:"Sistema", list:"/auditoria",
     cols:["id","fecha","usuarioId","tabla","accion","detalle"], readOnly:true,
     format:{ tabla:"humanize", accion:"humanize" } },
@@ -152,8 +167,7 @@ const MODELS = {
 // ---------------------------------------------------------------- HTTP
 async function api(method, path, body) {
   const doFetch = () => {
-    const opt = { method, headers: {} };
-    if (TOKEN) opt.headers["Authorization"] = "Bearer " + TOKEN;
+    const opt = { method, headers: authHeaders() };
     if (body !== undefined) { opt.headers["Content-Type"] = "application/json"; opt.body = JSON.stringify(body); }
     return fetch(API + path, opt);
   };
@@ -176,7 +190,7 @@ async function api(method, path, body) {
 async function apiUpload(path, file, fieldName = "archivo"){
   const doFetch = () => {
     const fd = new FormData(); fd.append(fieldName, file);
-    return fetch(API + path, { method:"POST", headers: TOKEN?{Authorization:"Bearer "+TOKEN}:{}, body: fd });
+    return fetch(API + path, { method:"POST", headers: authHeaders(), body: fd });
   };
   let res = await doFetch();
   if ((res.status === 401 || res.status === 403) && TOKEN && await tryRefresh()) res = await doFetch();
@@ -227,8 +241,36 @@ function cell(v){
 }
 function userbar(){
   el("#userbar").innerHTML = TOKEN
-    ? `Hola, <b>${esc(USER)}</b> <span class="small">(${esc(ROLE)})</span> <a onclick="logout()">Cerrar sesión</a>`
+    ? `Hola, <b>${esc(USER)}</b> <span class="small">(${esc(ROLE)})</span>
+       <span class="small" style="margin-left:14px">Empresa activa:</span>
+       <select id="tenantSel" onchange="setTenant(this.value)" style="max-width:240px;margin:0 6px"><option value="">— cargando… —</option></select>
+       <a onclick="logout()">Cerrar sesión</a>`
     : "";
+  if (TOKEN) cargarEmpresasSelector();
+}
+
+// Carga (una vez) las empresas en el selector de "Empresa activa".
+async function cargarEmpresasSelector(){
+  const sel = el("#tenantSel");
+  if (!sel) return;
+  try {
+    if (!EMPRESAS_CACHE) EMPRESAS_CACHE = (await api("GET", "/empresas")) || [];
+    const opts = [`<option value="">— Sin empresa (solo lectura) —</option>`].concat(
+      EMPRESAS_CACHE.map(e => `<option value="${e.id}" ${String(e.id)===String(TENANT)?"selected":""}>${esc(e.razonSocial || ("Empresa " + e.id))}</option>`));
+    sel.innerHTML = opts.join("");
+  } catch(e){
+    sel.innerHTML = `<option value="">(no se pudieron cargar)</option>`;
+  }
+}
+
+// Cambia la empresa activa: a partir de ahí cada petición lleva X-Tenant-ID, así el super_admin
+// (que no tiene empresa) puede operar dentro de la empresa elegida (emitir, PDF, folios, importar TXT…).
+function setTenant(id){
+  TENANT = id || "";
+  if (TENANT) localStorage.setItem("pm_tenant", TENANT); else localStorage.removeItem("pm_tenant");
+  const emp = (EMPRESAS_CACHE || []).find(e => String(e.id) === String(TENANT));
+  toast(TENANT ? ("Empresa activa: " + (emp ? emp.razonSocial : TENANT)) : "Sin empresa activa (solo lectura)", "ok");
+  showIndex();
 }
 // Pinta el cascarón con barra lateral + contenido
 function shell(activeKey, contentHtml){
@@ -503,6 +545,7 @@ function showImportTxt(){
   shell("__import", `<div class="crumbs"><a onclick="showIndex()">Inicio</a> › Importar TXT</div>
     <h2>Importar documento desde TXT</h2>
     <div class="module" style="padding:16px">
+      <p class="small">Se importa a la <b>empresa activa</b> seleccionada en la barra superior.${TENANT ? "" : ' <span style="color:#ba2121">⚠ No hay empresa activa seleccionada.</span>'}</p>
       <div class="field"><label>Archivo .txt</label><input type="file" id="txtFile" accept=".txt"></div>
       <button class="btn" onclick="previewTxt()">Previsualizar</button>
       <div id="impMsg" class="err"></div>
@@ -512,6 +555,7 @@ function showImportTxt(){
 function txtFile(){ const f = el("#txtFile").files[0]; if(!f) el("#impMsg").textContent = "Selecciona un archivo .txt primero."; return f; }
 async function previewTxt(){
   el("#impMsg").textContent = ""; el("#impBox").innerHTML = "";
+  if (!TENANT){ el("#impMsg").textContent = 'Seleccioná una «Empresa activa» en la barra superior antes de previsualizar/importar.'; return; }
   const f = txtFile(); if(!f) return;
   try {
     const d = await apiUpload("/api/documentos/importar-txt/preview", f);
@@ -654,9 +698,9 @@ async function borrar(key, id){
 // ---- Descargas (PDF/XML) con token ----
 async function downloadFile(path, filename){
   try {
-    let res = await fetch(API + path, { headers: TOKEN ? {Authorization:"Bearer "+TOKEN} : {} });
+    let res = await fetch(API + path, { headers: authHeaders() });
     if ((res.status===401||res.status===403) && TOKEN && await tryRefresh())
-      res = await fetch(API + path, { headers: {Authorization:"Bearer "+TOKEN} });
+      res = await fetch(API + path, { headers: authHeaders() });
     if (!res.ok){
       if ((res.status===401||res.status===403) && TOKEN){ logout(); return; }
       toast("Error al descargar (HTTP " + res.status + ")", "err"); return;
